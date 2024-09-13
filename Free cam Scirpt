@@ -1,0 +1,189 @@
+-- Free Cam Script (Mobile)
+
+-- Step 1: Duplication detection
+for _, v in pairs(game.Workspace:GetChildren()) do
+    if v.Name == "FreeCamScript" then
+        v:Destroy()  -- If a duplicate script exists, destroy it
+    end
+end
+
+-- Create new instance of the script
+local scriptObject = Instance.new("Model")
+scriptObject.Name = "FreeCamScript"
+scriptObject.Parent = game.Workspace
+
+-- Step 2: Create the Camera Part (still blue and visible through walls)
+local cameraPart = Instance.new("Part")
+cameraPart.Name = "FreeCamPart"
+cameraPart.Size = Vector3.new(2, 2, 2)
+cameraPart.Anchored = true
+cameraPart.CanCollide = false  -- Can pass through walls
+cameraPart.Color = Color3.new(0, 0, 1)  -- Make the part blue
+cameraPart.Transparency = 1 
+cameraPart.Parent = scriptObject
+
+-- Step 3: Create BillboardGui to show "Cam" text on the part
+local billboardGui = Instance.new("BillboardGui")
+billboardGui.Size = UDim2.new(0, 100, 0, 50)
+billboardGui.AlwaysOnTop = true
+billboardGui.StudsOffset = Vector3.new(0, 2, 0)
+billboardGui.Parent = cameraPart
+
+local textLabel = Instance.new("TextLabel")
+textLabel.Size = UDim2.new(1, 0, 1, 0)
+textLabel.Text = "Cam"
+textLabel.BackgroundTransparency = 1
+textLabel.TextColor3 = Color3.new(0, 0, 0)
+textLabel.Parent = billboardGui
+
+-- Step 4: Create draggable frame and place buttons inside
+local screenGui = Instance.new("ScreenGui")
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 300, 0, 400)
+mainFrame.Position = UDim2.new(0.05, 0, 0.1, 0)
+mainFrame.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+mainFrame.BackgroundTransparency = 0.3
+mainFrame.Active = true
+mainFrame.Draggable = true  -- Make the frame draggable on mobile
+
+-- Button creation function
+local function createButton(name, text, position)
+    local button = Instance.new("TextButton")
+    button.Name = name
+    button.Text = text
+    button.Size = UDim2.new(0, 90, 0, 50)
+    button.Position = position
+    button.Parent = mainFrame
+    return button
+end
+
+-- Create buttons and place them in the draggable frame
+local buttonUp = createButton("ButtonUp", "Up", UDim2.new(0.33, 0, 0.5, 1))
+local buttonDown = createButton("ButtonDown", "Down", UDim2.new(0.33, 0, 0.5, 50))
+local buttonLeft = createButton("ButtonLeft", "Left", UDim2.new(0, 0, 0.2, 0))
+local buttonRight = createButton("ButtonRight", "Right", UDim2.new(0.66, 0, 0.2, 0))
+local buttonForward = createButton("ButtonForward", "Forward", UDim2.new(0.33, 0, 0.1, 0))
+local buttonBackward = createButton("ButtonBackward", "Backward", UDim2.new(0.33, 0, 0.3, 0))
+
+-- Button for connecting and disconnecting the camera
+local connectButton = createButton("ConnectButton", "Connect Cam", UDim2.new(0.33, 0, 0.2, 0))
+
+-- Speed control inside the frame
+local speedLabel = Instance.new("TextLabel")
+speedLabel.Size = UDim2.new(0, 100, 0, 50)
+speedLabel.Position = UDim2.new(0.05, 0, 0.6, 0)
+speedLabel.Text = "Speed:"
+speedLabel.Parent = mainFrame
+speedLabel.Visible = false
+
+local speedSlider = Instance.new("TextBox")
+speedSlider.Size = UDim2.new(0, 100, 0, 50)
+speedSlider.Position = UDim2.new(0.55, 0, 0.6, 0)
+speedSlider.Text = "1"  -- Default speed logic
+speedSlider.Parent = mainFrame
+
+-- Add frame and GUI to the player
+mainFrame.Parent = screenGui
+screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+
+-- Step 5: Speed Logic (fixed as per the new instructions)
+local speed = 100  -- Default speed logic: if slider shows 1, speed = 10
+local isMoving = {up = false, down = false, left = false, right = false, forward = false, backward = false}
+
+local function updateSpeed()
+    local sliderValue = tonumber(speedSlider.Text)
+    if sliderValue then
+        -- Adjust speed based on the input value
+        speed = sliderValue * 10  -- For example: 0.1 = speed 1, 1 = speed 10, 2 = speed 20
+    else
+        speedSlider.Text = "1"  -- Default to speed 1 if input is invalid
+        speed = 100
+    end
+end
+
+-- Step 6: Movement Logic with smoother transitions
+local function movePart(direction)
+    local camera = game.Workspace.CurrentCamera
+    while isMoving[direction] do
+        -- Get the current direction of the camera
+        local forwardVector = camera.CFrame.LookVector
+        local rightVector = camera.CFrame.RightVector
+        local upVector = camera.CFrame.UpVector
+
+        -- Smooth movement logic
+        if direction == "up" then
+            cameraPart.Position = cameraPart.Position + upVector * speed * 0.01  -- Smooth transition
+        elseif direction == "down" then
+            cameraPart.Position = cameraPart.Position - upVector * speed * 0.01
+        elseif direction == "left" then
+            cameraPart.Position = cameraPart.Position - rightVector * speed * 0.01
+        elseif direction == "right" then
+            cameraPart.Position = cameraPart.Position + rightVector * speed * 0.01
+        elseif direction == "forward" then
+            cameraPart.Position = cameraPart.Position + forwardVector * speed * 0.01
+        elseif direction == "backward" then
+            cameraPart.Position = cameraPart.Position - forwardVector * speed * 0.01
+        end
+        wait(0.01)  -- Smaller wait time for smoother transitions
+    end
+end
+
+-- Connect buttons to movement functions and continuous press detection
+local function startMove(direction)
+    isMoving[direction] = true
+    movePart(direction)
+end
+
+local function stopMove(direction)
+    isMoving[direction] = false
+end
+
+-- Connect button inputs
+buttonUp.MouseButton1Down:Connect(function() startMove("up") end)
+buttonUp.MouseButton1Up:Connect(function() stopMove("up") end)
+
+buttonDown.MouseButton1Down:Connect(function() startMove("down") end)
+buttonDown.MouseButton1Up:Connect(function() stopMove("down") end)
+
+buttonLeft.MouseButton1Down:Connect(function() startMove("left") end)
+buttonLeft.MouseButton1Up:Connect(function() stopMove("left") end)
+
+buttonRight.MouseButton1Down:Connect(function() startMove("right") end)
+buttonRight.MouseButton1Up:Connect(function() stopMove("right") end)
+
+buttonForward.MouseButton1Down:Connect(function() startMove("forward") end)
+buttonForward.MouseButton1Up:Connect(function() stopMove("forward") end)
+
+buttonBackward.MouseButton1Down:Connect(function() startMove("backward") end)
+buttonBackward.MouseButton1Up:Connect(function() stopMove("backward") end)
+
+-- Update speed when the speed slider changes
+speedSlider.FocusLost:Connect(updateSpeed)
+
+-- Step 7: Moving the Camera/Head directly to the part
+local cameraConnected = false
+local function connectCamera()
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local head = character:FindFirstChild("Head")
+    
+    if not cameraConnected then
+        -- Move the camera or player's head directly to the part
+        if head then
+            head.CFrame = cameraPart.CFrame
+        end
+        game.Workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
+        game.Workspace.CurrentCamera.CameraSubject = cameraPart
+        connectButton.Text = "Disconnect Cam"
+        cameraConnected = true
+    else
+        -- Reset camera to normal
+        game.Workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
+        game.Workspace.CurrentCamera.CameraSubject = character:FindFirstChild("Humanoid")
+        connectButton.Text = "Connect Cam"
+        cameraConnected = false
+    end
+end
+
+-- Connect the button to the camera connection function
+connectButton.MouseButton1Click:Connect(connectCamera)
