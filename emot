@@ -1,20 +1,78 @@
-local Players = game:GetService("Players")
-local HttpService = game:GetService("HttpService")
-local StarterGui = game:GetService("StarterGui")
-local CoreGui = game:GetService("CoreGui")
-local MarketplaceService = game:GetService("MarketplaceService")
+-- Keybind to open for pc is "comma" -> " , "
+-- Made by Gi#7331
 
--- Destroy any existing GUI instances if the script runs again
-if CoreGui:FindFirstChild("CustomEmotesGui") then
-    CoreGui:FindFirstChild("CustomEmotesGui"):Destroy()
+game:GetService("StarterGui"):SetCore("SendNotification", {
+    Title = "Tips!",
+    Text = "Wait 1 - 15 seconds to show gui if it doesn't show, try executing again.",
+    Duration = 15
+})
+
+if game:GetService("CoreGui"):FindFirstChild("Emotes") then
+    game:GetService("CoreGui"):FindFirstChild("Emotes"):Destroy()
 end
 
--- Create main GUI
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "CustomEmotesGui"
-ScreenGui.Parent = CoreGui
+wait(1)
 
--- Loading frame
+local ContextActionService = game:GetService("ContextActionService")
+local HttpService = game:GetService("HttpService")
+local GuiService = game:GetService("GuiService")
+local CoreGui = game:GetService("CoreGui")
+local MarketplaceService = game:GetService("MarketplaceService")
+local Players = game:GetService("Players")
+local StarterGui = game:GetService("StarterGui")
+local UserInputService = game:GetService("UserInputService")
+
+local Emotes = {}
+local LoadedEmotes = {}
+local function AddEmote(name: string, id: IntValue, price: IntValue?)
+	LoadedEmotes[id] = false
+	task.spawn(function()
+		if not (name and id) then
+			return
+		end
+		local success, date = pcall(function()
+			local info = MarketplaceService:GetProductInfo(id)
+			local updated = info.Updated
+			return DateTime.fromIsoDate(updated):ToUniversalTime()
+		end)
+		if not success then
+			task.wait(10)
+			AddEmote(name, id, price)
+			return
+		end
+		local unix = os.time({
+			year = date.Year,
+			month = date.Month,
+			day = date.Day,
+			hour = date.Hour,
+			min = date.Minute,
+			sec = date.Second
+		})
+		LoadedEmotes[id] = true
+		table.insert(Emotes, {
+			["name"] = name,
+			["id"] = id,
+			["icon"] = "rbxthumb://type=Asset&id=".. id .."&w=150&h=150",
+			["price"] = price or 0,
+			["lastupdated"] = unix,
+			["sort"] = {}
+		})
+	end)
+end
+
+local CurrentSort = "recentfirst"
+
+local FavoriteOff = "rbxassetid://10651060677"
+local FavoriteOn = "rbxassetid://10651061109"
+local FavoritedEmotes = {}
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "Emotes"
+ScreenGui.DisplayOrder = 2
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Enabled = true
+
+-- Loading Screen
 local LoadingFrame = Instance.new("Frame", ScreenGui)
 LoadingFrame.Size = UDim2.new(0.3, 0, 0.1, 0)
 LoadingFrame.Position = UDim2.new(0.35, 0, 0.1, 0)
@@ -25,7 +83,6 @@ LoadingFrame.BorderSizePixel = 0
 local UICorner = Instance.new("UICorner", LoadingFrame)
 UICorner.CornerRadius = UDim.new(0.2, 0)
 
--- Loading text
 local LoadingText = Instance.new("TextLabel", LoadingFrame)
 LoadingText.Size = UDim2.new(1, 0, 1, 0)
 LoadingText.Text = "Loading Emotes..."
@@ -34,114 +91,92 @@ LoadingText.Font = Enum.Font.GothamBold
 LoadingText.TextScaled = true
 LoadingText.BackgroundTransparency = 1
 
--- Main scrollable frame for emotes (initially hidden)
-local MainFrame = Instance.new("ScrollingFrame", ScreenGui)
-MainFrame.Size = UDim2.new(0.6, 0, 0.6, 0)
-MainFrame.Position = UDim2.new(0.2, 0, 0.2, 0)
-MainFrame.BackgroundTransparency = 0.5
-MainFrame.ScrollBarThickness = 5
-MainFrame.Visible = false -- Hidden initially
-MainFrame.CanvasSize = UDim2.new(0, 0, 1, 0) -- Initial canvas size
+-- Main GUI Frame
+local BackFrame = Instance.new("Frame")
+BackFrame.Size = UDim2.new(0.9, 0, 0.5, 0)
+BackFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+BackFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+BackFrame.SizeConstraint = Enum.SizeConstraint.RelativeYY
+BackFrame.BackgroundTransparency = 1
+BackFrame.BorderSizePixel = 0
+BackFrame.Parent = ScreenGui
+BackFrame.Visible = false -- Hide until loaded
 
--- UI grid layout for buttons
-local EmoteGrid = Instance.new("UIGridLayout", MainFrame)
-EmoteGrid.CellSize = UDim2.new(0.15, 0, 0.15, 0)
-EmoteGrid.CellPadding = UDim2.new(0.01, 0, 0.01, 0)
-EmoteGrid.SortOrder = Enum.SortOrder.LayoutOrder
+local Open = Instance.new("TextButton")
+Open.Name = "Open"
+Open.Parent = ScreenGui
+Open.Draggable = true
+Open.Size = UDim2.new(0.05, 0, 0.114, 0)
+Open.Position = UDim2.new(0.05, 0, 0.25, 0)
+Open.Text = "Close"
+Open.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Open.TextColor3 = Color3.fromRGB(255, 255, 255)
+Open.TextScaled = true
+Open.BackgroundTransparency = 0.5
 
-local Emotes = {}
-local LoadedEmotes = {}
-
--- Function to add emote data
-local function AddEmote(name, id, icon)
-    table.insert(Emotes, {
-        name = name,
-        id = id,
-        icon = icon
-    })
-end
-
--- Function to create emote buttons
-local function CreateEmoteButtons()
-    for _, emote in pairs(Emotes) do
-        local EmoteButton = Instance.new("TextButton", MainFrame)
-        EmoteButton.Size = UDim2.new(0.15, 0, 0.15, 0)
-        EmoteButton.Text = ""
-        EmoteButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-        EmoteButton.BackgroundTransparency = 0.5
-        EmoteButton.BorderSizePixel = 0
-
-        local UICorner = Instance.new("UICorner", EmoteButton)
-        UICorner.CornerRadius = UDim.new(0.2, 0)
-
-        -- Add emote image
-        local EmoteImage = Instance.new("ImageLabel", EmoteButton)
-        EmoteImage.Size = UDim2.new(0.8, 0, 0.8, 0)
-        EmoteImage.Position = UDim2.new(0.1, 0, 0.1, 0)
-        EmoteImage.Image = emote.icon
-        EmoteImage.BackgroundTransparency = 1
-
-        -- Play emote on click
-        EmoteButton.MouseButton1Click:Connect(function()
-            local Humanoid = Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-            if Humanoid and Humanoid.RigType == Enum.HumanoidRigType.R15 then
-                pcall(function()
-                    Humanoid:PlayEmoteAndGetAnimTrackById(emote.id)
-                end)
-                MainFrame.Visible = false -- Hide frame when emote is selected
-            end
-        end)
+Open.MouseButton1Up:Connect(function()
+    if Open.Text == "Open" then
+        Open.Text = "Close"
+        BackFrame.Visible = true
+    else
+        Open.Text = "Open"
+        BackFrame.Visible = false
     end
-
-    -- Update ScrollFrame canvas size to fit all buttons
-    MainFrame.CanvasSize = UDim2.new(0, 0, 0, EmoteGrid.AbsoluteContentSize.Y + 10)
-end
-
--- Load all emotes with cursor-based pagination
-local function LoadEmotes()
-    local Cursor = ""
-    while true do
-        local function Request()
-            local success, Response = pcall(function()
-                return game:HttpGetAsync("https://catalog.roblox.com/v1/search/items/details?Category=12&Subcategory=39&SortType=1&SortAggregation=&limit=30&IncludeNotForSale=true&cursor=".. Cursor)
-            end)
-
-            if success then
-                return HttpService:JSONDecode(Response)
-            else
-                wait(10) -- Retry delay
-                return Request()
-            end
-        end
-
-        local Response = Request()
-        for _, v in pairs(Response.data) do
-            AddEmote(v.name, v.id, "rbxthumb://type=Asset&id="..v.id.."&w=150&h=150")
-        end
-
-        if Response.nextPageCursor then
-            Cursor = Response.nextPageCursor
-        else
-            break -- End loop when no more pages
-        end
-    end
-end
-
--- Wait until all emotes are loaded
-spawn(function()
-    LoadEmotes()
-    while #Emotes == 0 do
-        wait(0.5) -- Show loading if no emotes have been loaded yet
-    end
-    -- After loading, destroy loading frame and create buttons
-    LoadingFrame:Destroy()
-    MainFrame.Visible = true -- Show emote GUI once loaded
-    CreateEmoteButtons()
 end)
 
--- Send a notification once GUI is loaded
+UICorner.Name = "UICorner"
+UICorner.Parent = Open
+UICorner.CornerRadius = UDim.new(1, 0)
+
+-- Other GUI elements are placed within BackFrame (like EmoteName, SortingFrame, etc.)
+
+-- Emote fetching and logic
+local Cursor = ""
+while true do
+	local function Request()
+		local success, Response = pcall(function()
+			return game:HttpGetAsync("https://catalog.roblox.com/v1/search/items/details?Category=12&Subcategory=39&SortType=1&SortAggregation=&limit=30&IncludeNotForSale=true&cursor=".. Cursor)
+		end)
+		if not success then
+			task.wait(10)
+			return Request()
+		end
+		return Response
+	end
+
+	local Response = Request()
+	local Body = HttpService:JSONDecode(Response)
+	for i,v in pairs(Body.data) do
+		AddEmote(v.name, v.id, v.price)
+	end
+	if Body.nextPageCursor ~= nil then
+		Cursor = Body.nextPageCursor
+	else
+		break
+	end
+end
+
+-- Wait for all emotes to load before hiding the loading screen
+local function EmotesLoaded()
+	for i, loaded in pairs(LoadedEmotes) do
+		if not loaded then
+			return false
+		end
+	end
+	return true
+end
+
+while not EmotesLoaded() do
+	task.wait()
+end
+
+-- Hide the loading screen and show the main frame
+LoadingFrame:Destroy()
+BackFrame.Visible = true
+
+-- Send notification once done
 StarterGui:SetCore("SendNotification", {
-    Title = "Emotes GUI",
-    Text = "The emotes GUI is ready to use.",
-    Duration = 5
+    Title = "Done!",
+    Text = "Emotes GUI is ready!",
+    Duration = 10
 })
