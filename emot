@@ -1,13 +1,8 @@
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
-local MarketplaceService = game:GetService("MarketplaceService")
 local StarterGui = game:GetService("StarterGui")
 local CoreGui = game:GetService("CoreGui")
-local ContextActionService = game:GetService("ContextActionService")
-local UserInputService = game:GetService("UserInputService")
-
-local Emotes = {}
-local LoadedEmotes = {}
+local MarketplaceService = game:GetService("MarketplaceService")
 
 -- Destroy any existing GUI instances if the script runs again
 if CoreGui:FindFirstChild("CustomEmotesGui") then
@@ -33,25 +28,13 @@ UICorner.CornerRadius = UDim.new(0.2, 0)
 -- Loading text
 local LoadingText = Instance.new("TextLabel", LoadingFrame)
 LoadingText.Size = UDim2.new(1, 0, 1, 0)
-LoadingText.Text = "Loading..."
+LoadingText.Text = "Loading Emotes..."
 LoadingText.TextColor3 = Color3.fromRGB(255, 255, 255)
 LoadingText.Font = Enum.Font.GothamBold
 LoadingText.TextScaled = true
 LoadingText.BackgroundTransparency = 1
 
--- Toggle button to show and hide the emote GUI
-local ToggleButton = Instance.new("TextButton", ScreenGui)
-ToggleButton.Size = UDim2.new(0.1, 0, 0.05, 0)
-ToggleButton.Position = UDim2.new(0.9, -50, 0.9, -50)
-ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-ToggleButton.BackgroundTransparency = 0.5
-ToggleButton.Text = "Show Emotes"
-ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleButton.TextScaled = true
-local ToggleCorner = Instance.new("UICorner", ToggleButton)
-ToggleCorner.CornerRadius = UDim.new(0.2, 0)
-
--- Main scrollable frame for emotes
+-- Main scrollable frame for emotes (initially hidden)
 local MainFrame = Instance.new("ScrollingFrame", ScreenGui)
 MainFrame.Size = UDim2.new(0.6, 0, 0.6, 0)
 MainFrame.Position = UDim2.new(0.2, 0, 0.2, 0)
@@ -66,7 +49,10 @@ EmoteGrid.CellSize = UDim2.new(0.15, 0, 0.15, 0)
 EmoteGrid.CellPadding = UDim2.new(0.01, 0, 0.01, 0)
 EmoteGrid.SortOrder = Enum.SortOrder.LayoutOrder
 
--- Add emotes after loading
+local Emotes = {}
+local LoadedEmotes = {}
+
+-- Function to add emote data
 local function AddEmote(name, id, icon)
     table.insert(Emotes, {
         name = name,
@@ -103,7 +89,6 @@ local function CreateEmoteButtons()
                     Humanoid:PlayEmoteAndGetAnimTrackById(emote.id)
                 end)
                 MainFrame.Visible = false -- Hide frame when emote is selected
-                ToggleButton.Text = "Show Emotes" -- Reset the toggle button text
             end
         end)
     end
@@ -111,12 +96,6 @@ local function CreateEmoteButtons()
     -- Update ScrollFrame canvas size to fit all buttons
     MainFrame.CanvasSize = UDim2.new(0, 0, 0, EmoteGrid.AbsoluteContentSize.Y + 10)
 end
-
--- Toggle emote GUI visibility
-ToggleButton.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-    ToggleButton.Text = MainFrame.Visible and "Hide Emotes" or "Show Emotes"
-end)
 
 -- Load all emotes with cursor-based pagination
 local function LoadEmotes()
@@ -156,5 +135,13 @@ spawn(function()
     end
     -- After loading, destroy loading frame and create buttons
     LoadingFrame:Destroy()
+    MainFrame.Visible = true -- Show emote GUI once loaded
     CreateEmoteButtons()
 end)
+
+-- Send a notification once GUI is loaded
+StarterGui:SetCore("SendNotification", {
+    Title = "Emotes GUI",
+    Text = "The emotes GUI is ready to use.",
+    Duration = 5
+})
