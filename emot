@@ -1,35 +1,40 @@
 -- Keybind to open for PC is "comma" -> " , "
 -- Made by Gi#7331
 
+-- Initial notification
 game:GetService("StarterGui"):SetCore("SendNotification", {
     Title = "Tips!",
-    Text = "Wait 1 - 15 seconds to show GUI. If it doesn't show, try executing again.",
+    Text = "Wait 1 - 15 seconds for the GUI to load. If it doesn't show, try executing again.",
     Duration = 15
 })
 
+-- Clean up any existing GUI
 if game:GetService("CoreGui"):FindFirstChild("Emotes") then
     game:GetService("CoreGui"):FindFirstChild("Emotes"):Destroy()
 end
 
+-- Wait for the game to fully load
 wait(1)
 
+-- Services
 local ContextActionService = game:GetService("ContextActionService")
 local HttpService = game:GetService("HttpService")
-local GuiService = game:GetService("GuiService")
 local CoreGui = game:GetService("CoreGui")
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local StarterGui = game:GetService("StarterGui")
 local UserInputService = game:GetService("UserInputService")
 
+-- Variables
 local Emotes = {}
 local LoadedEmotes = {}
-
-local FavoriteOff = "rbxassetid://10651060677"
-local FavoriteOn = "rbxassetid://10651061109"
 local FavoritedEmotes = {}
 
--- Function to add an emote to the Emotes table
+-- Favorite icons
+local FavoriteOff = "rbxassetid://10651060677"
+local FavoriteOn = "rbxassetid://10651061109"
+
+-- Add Emote to the list
 local function AddEmote(name: string, id: IntValue, price: IntValue?)
     LoadedEmotes[id] = false
     task.spawn(function()
@@ -60,24 +65,22 @@ local function AddEmote(name: string, id: IntValue, price: IntValue?)
             ["id"] = id,
             ["icon"] = "rbxthumb://type=Asset&id=".. id .."&w=150&h=150",
             ["price"] = price or 0,
-            ["lastupdated"] = unix,
-            ["sort"] = {}
+            ["lastupdated"] = unix
         })
     end)
 end
 
-local CurrentSort = "recentfirst"
-
+-- UI Setup
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "Emotes"
 ScreenGui.DisplayOrder = 2
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.Parent = CoreGui -- Ensure it is parented properly
+ScreenGui.Parent = CoreGui -- Set the parent to CoreGui
 
--- Loading Screen
+-- Loading Frame
 local LoadingFrame = Instance.new("Frame", ScreenGui)
 LoadingFrame.Size = UDim2.new(0.3, 0, 0.1, 0)
-LoadingFrame.Position = UDim2.new(0.35, 0, 0.4, 0) -- Centered
+LoadingFrame.Position = UDim2.new(0.35, 0, 0.4, 0)
 LoadingFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 LoadingFrame.BackgroundTransparency = 0.5
 LoadingFrame.BorderSizePixel = 0
@@ -93,23 +96,28 @@ LoadingText.Font = Enum.Font.GothamBold
 LoadingText.TextScaled = true
 LoadingText.BackgroundTransparency = 1
 
--- Main GUI Frame (Emote List)
-local BackFrame = Instance.new("Frame")
-BackFrame.Size = UDim2.new(0.8, 0, 0.6, 0) -- Responsive size for both PC and mobile
+-- Main Frame (Emotes)
+local BackFrame = Instance.new("Frame", ScreenGui)
+BackFrame.Size = UDim2.new(0.8, 0, 0.6, 0)
 BackFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-BackFrame.Position = UDim2.new(0.5, 0, 0.5, 0) -- Centered
-BackFrame.BackgroundTransparency = 1 -- Fully transparent
+BackFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+BackFrame.BackgroundTransparency = 1
 BackFrame.BorderSizePixel = 0
-BackFrame.Parent = ScreenGui
-BackFrame.Visible = false -- Hide until loaded
+BackFrame.Visible = false
 BackFrame.Active = true
-BackFrame.Draggable = true -- Draggable on mobile and PC
+BackFrame.Draggable = true
 
--- UI aspect ratio constraint to ensure it scales well on mobile and PC
-local AspectRatio = Instance.new("UIAspectRatioConstraint", BackFrame)
-AspectRatio.AspectRatio = 1.6 -- Width to height ratio
+-- Emote Name Display
+local EmoteName = Instance.new("TextLabel", BackFrame)
+EmoteName.Size = UDim2.new(0.5, 0, 0.05, 0)
+EmoteName.Position = UDim2.new(0.25, 0, 0, 0)
+EmoteName.BackgroundTransparency = 1
+EmoteName.Text = ""
+EmoteName.TextColor3 = Color3.fromRGB(255, 255, 255)
+EmoteName.Font = Enum.Font.GothamBold
+EmoteName.TextScaled = true
 
--- Emote Scrolling Frame (where the emotes will be displayed)
+-- Scrolling Frame for Emotes
 local EmoteScrollFrame = Instance.new("ScrollingFrame", BackFrame)
 EmoteScrollFrame.Size = UDim2.new(1, 0, 0.9, 0)
 EmoteScrollFrame.Position = UDim2.new(0, 0, 0.1, 0)
@@ -121,69 +129,53 @@ local GridLayout = Instance.new("UIGridLayout", EmoteScrollFrame)
 GridLayout.CellSize = UDim2.new(0.1, 0, 0.1, 0)
 GridLayout.CellPadding = UDim2.new(0.01, 0, 0.01, 0)
 
--- Emote Name Display
-local EmoteName = Instance.new("TextLabel", BackFrame)
-EmoteName.Size = UDim2.new(0.5, 0, 0.05, 0)
-EmoteName.Position = UDim2.new(0.25, 0, 0.05, 0)
-EmoteName.BackgroundTransparency = 1
-EmoteName.Text = ""
-EmoteName.TextColor3 = Color3.fromRGB(255, 255, 255)
-EmoteName.Font = Enum.Font.GothamBold
-EmoteName.TextScaled = true
+-- Toggle Button
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Size = UDim2.new(0.1, 0, 0.05, 0)
+ToggleButton.Position = UDim2.new(0.9, -10, 0.9, -10) -- Bottom-right
+ToggleButton.Text = "Open"
+ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.TextScaled = true
+ToggleButton.Parent = ScreenGui
+ToggleButton.Visible = false -- Hidden until emotes are loaded
+ToggleButton.Active = true
+ToggleButton.Draggable = true
 
--- Toggle Button for opening/closing GUI (Will be displayed after loading)
-local Open = Instance.new("TextButton")
-Open.Name = "Open"
-Open.Parent = ScreenGui
-Open.Size = UDim2.new(0.1, 0, 0.05, 0)
-Open.Position = UDim2.new(0.9, -50, 0.9, 0) -- Bottom-right position
-Open.Text = "Open"
-Open.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-Open.TextColor3 = Color3.fromRGB(255, 255, 255)
-Open.TextScaled = true
-Open.BackgroundTransparency = 0.5
-Open.Visible = false -- Hide until emotes are loaded
-Open.Active = true
-Open.Draggable = true -- Make it draggable on mobile and PC
-
--- Button functionality to toggle the emote frame
-Open.MouseButton1Up:Connect(function()
-    if Open.Text == "Open" then
-        Open.Text = "Close"
-        BackFrame.Visible = true
-    else
-        Open.Text = "Open"
+-- Toggle Button functionality
+ToggleButton.MouseButton1Click:Connect(function()
+    if BackFrame.Visible then
         BackFrame.Visible = false
+        ToggleButton.Text = "Open"
+    else
+        BackFrame.Visible = true
+        ToggleButton.Text = "Close"
     end
 end)
 
-UICorner.Name = "UICorner"
-UICorner.Parent = Open
-UICorner.CornerRadius = UDim.new(1, 0)
-
--- Function to load emotes and create buttons for them
+-- Function to load emotes
 local function LoadEmotes()
     for _, emote in pairs(Emotes) do
-        -- Create an emote button
+        -- Create the button for each emote
         local EmoteButton = Instance.new("ImageButton", EmoteScrollFrame)
         EmoteButton.Image = emote.icon
         EmoteButton.Name = emote.name
-        EmoteButton.BackgroundTransparency = 0.5 -- 50% transparent
+        EmoteButton.BackgroundTransparency = 0.5 -- 50% transparency
         EmoteButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 
-        -- Add functionality to play emote when button is clicked
+        -- Play the emote on button press
         EmoteButton.MouseButton1Click:Connect(function()
             local Humanoid = Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
             local Description = Humanoid and Humanoid:FindFirstChildOfClass("HumanoidDescription")
             if Description then
                 Humanoid:PlayEmoteAndGetAnimTrackById(emote.id)
-                -- Hide the frame and reset the toggle button after pressing
                 BackFrame.Visible = false
-                Open.Text = "Open"
+                ToggleButton.Text = "Open"
             end
         end)
 
-        -- Show the emote name when hovering or tapping
+        -- Update emote name when hovering or pressing
         EmoteButton.MouseEnter:Connect(function()
             EmoteName.Text = emote.name
         end)
@@ -193,7 +185,7 @@ local function LoadEmotes()
     end
 end
 
--- Detect emotes and display the GUI once loaded
+-- Check if emotes are fully loaded
 local function EmotesLoaded()
     for _, loaded in pairs(LoadedEmotes) do
         if not loaded then
@@ -203,24 +195,24 @@ local function EmotesLoaded()
     return true
 end
 
+-- Wait for all emotes to load, then display the toggle button and hide the loading screen
 local function WaitForEmotes()
     while not EmotesLoaded() do
         task.wait()
     end
-    -- Show toggle button and hide loading screen once done
-    LoadingFrame:Destroy()
-    Open.Visible = true
-    LoadEmotes() -- Load and display emote buttons
+    LoadingFrame:Destroy() -- Remove the loading screen
+    ToggleButton.Visible = true -- Show the toggle button
+    LoadEmotes() -- Load and display the emote buttons
 end
 
--- Add some sample emotes (can be replaced by actual API calls)
+-- Sample emotes (can be replaced by actual API calls)
 AddEmote("Wave", 5915773155)
 AddEmote("Dance", 5915779725)
 AddEmote("Jump", 9830731012)
 
-WaitForEmotes() -- Start the emote loading process
+WaitForEmotes() -- Start loading emotes
 
--- Send notification once done
+-- Final notification
 StarterGui:SetCore("SendNotification", {
     Title = "Done!",
     Text = "Emotes GUI is ready!",
