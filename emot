@@ -27,39 +27,39 @@ local LoadedEmotes = {}
 
 -- Function to add an emote to the Emotes table
 local function AddEmote(name: string, id: IntValue, price: IntValue?)
-	LoadedEmotes[id] = false
-	task.spawn(function()
-		if not (name and id) then
-			return
-		end
-		local success, date = pcall(function()
-			local info = MarketplaceService:GetProductInfo(id)
-			local updated = info.Updated
-			return DateTime.fromIsoDate(updated):ToUniversalTime()
-		end)
-		if not success then
-			task.wait(10)
-			AddEmote(name, id, price)
-			return
-		end
-		local unix = os.time({
-			year = date.Year,
-			month = date.Month,
-			day = date.Day,
-			hour = date.Hour,
-			min = date.Minute,
-			sec = date.Second
-		})
-		LoadedEmotes[id] = true
-		table.insert(Emotes, {
-			["name"] = name,
-			["id"] = id,
-			["icon"] = "rbxthumb://type=Asset&id=".. id .."&w=150&h=150",
-			["price"] = price or 0,
-			["lastupdated"] = unix,
-			["sort"] = {}
-		})
-	end)
+    LoadedEmotes[id] = false
+    task.spawn(function()
+        if not (name and id) then
+            return
+        end
+        local success, date = pcall(function()
+            local info = MarketplaceService:GetProductInfo(id)
+            local updated = info.Updated
+            return DateTime.fromIsoDate(updated):ToUniversalTime()
+        end)
+        if not success then
+            task.wait(10)
+            AddEmote(name, id, price)
+            return
+        end
+        local unix = os.time({
+            year = date.Year,
+            month = date.Month,
+            day = date.Day,
+            hour = date.Hour,
+            min = date.Minute,
+            sec = date.Second
+        })
+        LoadedEmotes[id] = true
+        table.insert(Emotes, {
+            ["name"] = name,
+            ["id"] = id,
+            ["icon"] = "rbxthumb://type=Asset&id=".. id .."&w=150&h=150",
+            ["price"] = price or 0,
+            ["lastupdated"] = unix,
+            ["sort"] = {}
+        })
+    end)
 end
 
 local CurrentSort = "recentfirst"
@@ -71,7 +71,7 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "Emotes"
 ScreenGui.DisplayOrder = 2
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.Parent = CoreGui -- Ensuring it is parented properly
+ScreenGui.Parent = CoreGui -- Ensure it is parented properly
 
 -- Loading Screen
 local LoadingFrame = Instance.new("Frame", ScreenGui)
@@ -171,41 +171,41 @@ end
 -- Fetch Emotes Logic
 local Cursor = ""
 while true do
-	local function Request()
-		local success, Response = pcall(function()
-			return game:HttpGetAsync("https://catalog.roblox.com/v1/search/items/details?Category=12&Subcategory=39&SortType=1&SortAggregation=&limit=30&IncludeNotForSale=true&cursor=".. Cursor)
-		end)
-		if not success then
-			task.wait(10)
-			return Request()
-		end
-		return Response
-	end
+    local function Request()
+        local success, Response = pcall(function()
+            return game:HttpGetAsync("https://catalog.roblox.com/v1/search/items/details?Category=12&Subcategory=39&SortType=1&SortAggregation=&limit=30&IncludeNotForSale=true&cursor=".. Cursor)
+        end)
+        if not success then
+            task.wait(10)
+            return Request()
+        end
+        return Response
+    end
 
-	local Response = Request()
-	local Body = HttpService:JSONDecode(Response)
-	for i,v in pairs(Body.data) do
-		AddEmote(v.name, v.id, v.price)
-	end
-	if Body.nextPageCursor ~= nil then
-		Cursor = Body.nextPageCursor
-	else
-		break
-	end
+    local Response = Request()
+    local Body = HttpService:JSONDecode(Response)
+    for i,v in pairs(Body.data) do
+        AddEmote(v.name, v.id, v.price)
+    end
+    if Body.nextPageCursor ~= nil then
+        Cursor = Body.nextPageCursor
+    else
+        break
+    end
 end
 
 -- Wait for all emotes to load before hiding the loading screen and showing the GUI
 local function EmotesLoaded()
-	for _, loaded in pairs(LoadedEmotes) do
-		if not loaded then
-			return false
-		end
-	end
-	return true
+    for _, loaded in pairs(LoadedEmotes) do
+        if not loaded then
+            return false
+        end
+    end
+    return true
 end
 
 while not EmotesLoaded() do
-	task.wait()
+    task.wait()
 end
 
 -- Emotes loaded, now hide loading screen and show the toggle button
