@@ -1,6 +1,6 @@
 -- Keybind to open the Emote GUI is "comma" -> " , " for PC
 -- Toggle button added for mobile devices
--- Made using custom GUI with Favorites at the top and full transparency for non-button components
+-- Favorites section at the top and full transparency for non-button components
 
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
@@ -35,11 +35,11 @@ ScreenGui.Parent = game:GetService("CoreGui")
 local MainFrame = Instance.new("ScrollingFrame", ScreenGui)
 MainFrame.Size = UDim2.new(0.6, 0, 0.6, 0)
 MainFrame.Position = UDim2.new(0.2, 0, 0.2, 0)
-MainFrame.BackgroundTransparency = 1
+MainFrame.BackgroundTransparency = 1 -- Full transparency
 MainFrame.BorderSizePixel = 0
 MainFrame.ScrollBarThickness = 5
 MainFrame.ScrollingDirection = Enum.ScrollingDirection.Y
-MainFrame.CanvasSize = UDim2.new(0, 0, 2, 0)
+MainFrame.CanvasSize = UDim2.new(0, 0, 2, 0) -- Adjust dynamically later
 MainFrame.Visible = false
 
 -- Add a UI grid layout to organize emote buttons
@@ -50,14 +50,11 @@ EmoteGrid.SortOrder = Enum.SortOrder.LayoutOrder
 EmoteGrid.HorizontalAlignment = Enum.HorizontalAlignment.Center
 EmoteGrid.VerticalAlignment = Enum.VerticalAlignment.Top
 
--- Frame for favorites
-local FavoritesFrame = Instance.new("ScrollingFrame", ScreenGui)
-FavoritesFrame.Size = UDim2.new(0.6, 0, 0.2, 0)
-FavoritesFrame.Position = UDim2.new(0.2, 0, 0.8, 0)
+-- Frame for favorites (part of the scrolling frame)
+local FavoritesFrame = Instance.new("Frame", MainFrame)
+FavoritesFrame.Size = UDim2.new(1, 0, 0.3, 0) -- Adjustable height for favorites
 FavoritesFrame.BackgroundTransparency = 1
 FavoritesFrame.BorderSizePixel = 0
-FavoritesFrame.ScrollBarThickness = 5
-FavoritesFrame.Visible = false
 
 local FavoriteLabel = Instance.new("TextLabel", FavoritesFrame)
 FavoriteLabel.Size = UDim2.new(1, 0, 0.2, 0)
@@ -172,6 +169,9 @@ local function LoadEmotes()
         end
     end
 
+    -- Adjust canvas size based on content
+    MainFrame.CanvasSize = UDim2.new(0, 0, 0, #MainFrame:GetChildren() * 110)
+
     -- Handle pagination if more emotes are available
     if Body.nextPageCursor then
         Cursor = Body.nextPageCursor
@@ -206,4 +206,4 @@ end, true, Enum.KeyCode.Comma)
 LoadEmotes()
 
 -- Display a notification when the emotes GUI is ready
-SendNotification("Emotes GUI", "Emotes GUI is now available. Press ',' or use the button to toggle.")
+SendNotification("Emotes GUI", "Emotes GUI is now available. Press ',' or use the button to toggle shutttt.")
