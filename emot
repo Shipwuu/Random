@@ -22,6 +22,11 @@ local function WaitForAllEmotesToLoad()
     return true
 end
 
+-- Destroy old instances if the script is executed twice
+if CoreGui:FindFirstChild("CustomEmotesGui") then
+    CoreGui:FindFirstChild("CustomEmotesGui"):Destroy()
+end
+
 -- Main GUI setup
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "CustomEmotesGui"
@@ -75,10 +80,11 @@ EmoteGrid.CellPadding = UDim2.new(0.01, 0, 0.01, 0)
 EmoteGrid.SortOrder = Enum.SortOrder.LayoutOrder
 
 -- Add emotes after everything is loaded
-local function AddEmote(name, id)
+local function AddEmote(name, id, icon)
     table.insert(Emotes, {
         name = name,
-        id = id
+        id = id,
+        icon = icon
     })
 end
 
@@ -87,16 +93,20 @@ local function CreateEmoteButtons()
     for _, emote in pairs(Emotes) do
         local EmoteButton = Instance.new("TextButton", MainFrame)
         EmoteButton.Size = UDim2.new(0.15, 0, 0.15, 0)
-        EmoteButton.Text = emote.name
-        EmoteButton.TextScaled = true
-        EmoteButton.TextWrapped = true -- Make sure text stays within the button
+        EmoteButton.Text = ""
         EmoteButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-        EmoteButton.TextColor3 = Color3.fromRGB(255, 255, 255)
         EmoteButton.BackgroundTransparency = 0.5
         EmoteButton.BorderSizePixel = 0
 
         local UICorner = Instance.new("UICorner", EmoteButton)
         UICorner.CornerRadius = UDim.new(0.2, 0)
+
+        -- Add emote image
+        local EmoteImage = Instance.new("ImageLabel", EmoteButton)
+        EmoteImage.Size = UDim2.new(0.8, 0, 0.8, 0)
+        EmoteImage.Position = UDim2.new(0.1, 0, 0.1, 0)
+        EmoteImage.Image = emote.icon
+        EmoteImage.BackgroundTransparency = 1
 
         -- Play emote on click
         EmoteButton.MouseButton1Click:Connect(function()
@@ -106,6 +116,7 @@ local function CreateEmoteButtons()
                     Humanoid:PlayEmoteAndGetAnimTrackById(emote.id)
                 end)
                 MainFrame.Visible = false -- Hide frame when emote is selected
+                ToggleButton.Text = "Show Emotes" -- Reset the toggle button text
             end
         end)
 
@@ -149,7 +160,7 @@ local function LoadEmotes()
     if success then
         local Body = HttpService:JSONDecode(Response)
         for _, emoteData in pairs(Body.data) do
-            AddEmote(emoteData.name, emoteData.id)
+            AddEmote(emoteData.name, emoteData.id, "rbxthumb://type=Asset&id="..emoteData.id.."&w=150&h=150")
         end
     end
 end
