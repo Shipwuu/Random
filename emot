@@ -1,0 +1,192 @@
+-- Keybind to open the Emote GUI is "comma" -> " , "
+-- Made using custom GUI with Favorites
+
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+local MarketplaceService = game:GetService("MarketplaceService")
+local ContextActionService = game:GetService("ContextActionService")
+local StarterGui = game:GetService("StarterGui")
+local UserInputService = game:GetService("UserInputService")
+local GuiService = game:GetService("GuiService")
+
+local LocalPlayer = Players.LocalPlayer
+local Cursor = ""
+local Emotes = {}
+local LoadedEmotes = {}
+local FavoriteEmotes = {}
+
+-- Load favorites from local file
+if isfile("FavoritedEmotes.txt") then
+    local success, result = pcall(function()
+        return HttpService:JSONDecode(readfile("FavoritedEmotes.txt"))
+    end)
+    if success then
+        FavoriteEmotes = result
+    end
+end
+
+-- Create a new ScreenGui and add it to CoreGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "CustomEmotesGui"
+ScreenGui.Parent = game:GetService("CoreGui")
+
+-- Main frame for emotes
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0.6, 0, 0.6, 0)
+MainFrame.Position = UDim2.new(0.2, 0, 0.2, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+MainFrame.Visible = false
+
+-- Add a UI grid layout to organize emote buttons
+local EmoteGrid = Instance.new("UIGridLayout", MainFrame)
+EmoteGrid.CellSize = UDim2.new(0.2, 0, 0.2, 0)
+EmoteGrid.FillDirection = Enum.FillDirection.Horizontal
+EmoteGrid.SortOrder = Enum.SortOrder.LayoutOrder
+EmoteGrid.HorizontalAlignment = Enum.HorizontalAlignment.Center
+EmoteGrid.VerticalAlignment = Enum.VerticalAlignment.Top
+
+-- Frame for favorites
+local FavoritesFrame = Instance.new("Frame", ScreenGui)
+FavoritesFrame.Size = UDim2.new(0.6, 0, 0.2, 0)
+FavoritesFrame.Position = UDim2.new(0.2, 0, 0.8, 0)
+FavoritesFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+FavoritesFrame.Visible = false
+
+local FavoriteLabel = Instance.new("TextLabel", FavoritesFrame)
+FavoriteLabel.Size = UDim2.new(1, 0, 0.2, 0)
+FavoriteLabel.Text = "Favorite Emotes"
+FavoriteLabel.BackgroundTransparency = 1
+FavoriteLabel.TextScaled = true
+FavoriteLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+local FavoriteGrid = Instance.new("UIGridLayout", FavoritesFrame)
+FavoriteGrid.CellSize = UDim2.new(0.2, 0, 0.6, 0)
+FavoriteGrid.FillDirection = Enum.FillDirection.Horizontal
+FavoriteGrid.SortOrder = Enum.SortOrder.LayoutOrder
+FavoriteGrid.HorizontalAlignment = Enum.HorizontalAlignment.Center
+FavoriteGrid.VerticalAlignment = Enum.VerticalAlignment.Top
+
+-- Create a function to display notification
+local function SendNotification(title, text, duration)
+    StarterGui:SetCore("SendNotification", {
+        Title = title,
+        Text = text,
+        Duration = duration or 5
+    })
+end
+
+-- Save favorites to local file
+local function SaveFavorites()
+    writefile("FavoritedEmotes.txt", HttpService:JSONEncode(FavoriteEmotes))
+end
+
+-- Function to add an emote button to the GUI
+local function AddEmoteButton(emoteData, isFavorite)
+    local EmoteButton = Instance.new("TextButton")
+    EmoteButton.Size = UDim2.new(0, 100, 0, 100)
+    EmoteButton.Text = emoteData.name
+    EmoteButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    EmoteButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    
+    -- Play the emote when button is clicked
+    EmoteButton.MouseButton1Click:Connect(function()
+        local Humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if Humanoid and Humanoid.RigType == Enum.HumanoidRigType.R15 then
+            pcall(function()
+                Humanoid:PlayEmoteAndGetAnimTrackById(emoteData.id)
+            end)
+        else
+            SendNotification("R6 Rig Type Not Supported", "Emotes can only be played on R15 characters.")
+        end
+    end)
+    
+    -- Create favorite toggle button
+    local FavoriteToggle = Instance.new("TextButton", EmoteButton)
+    FavoriteToggle.Size = UDim2.new(0.3, 0, 0.3, 0)
+    FavoriteToggle.Position = UDim2.new(0.7, 0, 0, 0)
+    FavoriteToggle.Text = "★"
+    FavoriteToggle.TextColor3 = isFavorite and Color3.fromRGB(255, 215, 0) or Color3.fromRGB(200, 200, 200)
+    
+    FavoriteToggle.MouseButton1Click:Connect(function()
+        if not table.find(FavoriteEmotes, emoteData.id) then
+            table.insert(FavoriteEmotes, emoteData.id)
+            FavoriteToggle.TextColor3 = Color3.fromRGB(255, 215, 0)
+            AddEmoteButton(emoteData, true).Parent = FavoritesFrame -- Add to favorite frame
+        else
+            for i, v in ipairs(FavoriteEmotes) do
+                if v == emoteData.id then
+                    table.remove(FavoriteEmotes, i)
+                    break
+                end
+            end
+            FavoriteToggle.TextColor3 = Color3.fromRGB(200, 200, 200)
+            -- Remove from favorite frame
+            for _, btn in ipairs(FavoritesFrame:GetChildren()) do
+                if btn:IsA("TextButton") and btn.Text == emoteData.name then
+                    btn:Destroy()
+                end
+            end
+        end
+        SaveFavorites()
+    end)
+    
+    return EmoteButton
+end
+
+-- Function to load all emotes
+local function LoadEmotes()
+    local function RequestEmotes()
+        local success, Response = pcall(function()
+            return game:HttpGetAsync("https://catalog.roblox.com/v1/search/items/details?Category=12&Subcategory=39&SortType=1&limit=30&IncludeNotForSale=true&cursor=" .. Cursor)
+        end)
+        if not success then
+            task.wait(10)
+            return RequestEmotes()
+        end
+        return Response
+    end
+
+    local Response = RequestEmotes()
+    local Body = HttpService:JSONDecode(Response)
+
+    -- Add emotes to GUI
+    for _, emoteData in pairs(Body.data) do
+        local isFavorite = table.find(FavoriteEmotes, emoteData.id) ~= nil
+        AddEmoteButton({
+            name = emoteData.name,
+            id = emoteData.id
+        }, isFavorite).Parent = MainFrame
+        
+        if isFavorite then
+            AddEmoteButton({
+                name = emoteData.name,
+                id = emoteData.id
+            }, true).Parent = FavoritesFrame
+        end
+    end
+
+    -- Handle pagination if more emotes are available
+    if Body.nextPageCursor then
+        Cursor = Body.nextPageCursor
+        LoadEmotes()
+    end
+end
+
+-- Bind the comma key to toggle the GUI
+ContextActionService:BindAction("ToggleEmoteGui", function(_, inputState)
+    if inputState == Enum.UserInputState.Begin then
+        MainFrame.Visible = not MainFrame.Visible
+        FavoritesFrame.Visible = not FavoritesFrame.Visible
+    end
+end, false, Enum.KeyCode.Comma)
+
+-- Initial notification
+SendNotification("Emote GUI", "Press ',' to open the Emote GUI", 10)
+
+-- Load emotes asynchronously
+LoadEmotes()
+
+-- Protect the GUI if synapse or similar environment is detected
+if syn and syn.protect_gui then
+    syn.protect_gui(ScreenGui)
+end
