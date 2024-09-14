@@ -26,44 +26,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Emotes = {}
 local LoadedEmotes = {}
-
--- Function to add emotes
-local function AddEmote(name: string, id: IntValue, price: IntValue?)
-    LoadedEmotes[id] = false
-    task.spawn(function()
-        if not (name and id) then
-            return
-        end
-        local success, date = pcall(function()
-            local info = MarketplaceService:GetProductInfo(id)
-            local updated = info.Updated
-            return DateTime.fromIsoDate(updated):ToUniversalTime()
-        end)
-        if not success then
-            task.wait(10)
-            AddEmote(name, id, price)
-            return
-        end
-        local unix = os.time({
-            year = date.Year,
-            month = date.Month,
-            day = date.Day,
-            hour = date.Hour,
-            min = date.Minute,
-            sec = date.Second
-        })
-        LoadedEmotes[id] = true
-        table.insert(Emotes, {
-            ["name"] = name,
-            ["id"] = id,
-            ["icon"] = "rbxthumb://type=Asset&id=".. id .."&w=150&h=150",
-            ["price"] = price or 0,
-            ["lastupdated"] = unix,
-            ["sort"] = {}
-        })
-    end)
-end
-
+local LongPressDuration = 3 -- Long press detection time
 local CurrentSort = "recentfirst"
 local FavoriteOff = "rbxassetid://10651060677"
 local FavoriteOn = "rbxassetid://10651061109"
@@ -83,19 +46,6 @@ BackFrame.SizeConstraint = Enum.SizeConstraint.RelativeYY
 BackFrame.BackgroundTransparency = 1
 BackFrame.BorderSizePixel = 0
 BackFrame.Parent = ScreenGui
-
--- Loading Screen
-local Loading = Instance.new("TextLabel", BackFrame)
-Loading.AnchorPoint = Vector2.new(0.5, 0.5)
-Loading.Text = "Loading..."
-Loading.TextColor3 = Color3.new(1, 1, 1)
-Loading.BackgroundColor3 = Color3.new(0, 0, 0)
-Loading.TextScaled = true
-Loading.BackgroundTransparency = 0.5
-Loading.Size = UDim2.fromScale(0.2, 0.1)
-Loading.Position = UDim2.fromScale(0.5, 0.2)
-local Corner = Instance.new("UICorner", Loading)
-Corner.CornerRadius = UDim.new(0.2, 0)
 
 Open.Name = "Open"
 Open.Parent = ScreenGui
@@ -140,6 +90,17 @@ EmoteName.Parent = BackFrame
 local Corner = Instance.new("UICorner")
 Corner.Parent = EmoteName
 
+local Loading = Instance.new("TextLabel", BackFrame)
+Loading.AnchorPoint = Vector2.new(0.5, 0.5)
+Loading.Text = "Loading..."
+Loading.TextColor3 = Color3.new(1, 1, 1)
+Loading.BackgroundColor3 = Color3.new(0, 0, 0)
+Loading.TextScaled = true
+Loading.BackgroundTransparency = 0.5
+Loading.Size = UDim2.fromScale(0.2, 0.1)
+Loading.Position = UDim2.fromScale(0.5, 0.2)
+Corner:Clone().Parent = Loading
+
 local Frame = Instance.new("ScrollingFrame")
 Frame.Size = UDim2.new(1, 0, 1, 0)
 Frame.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -179,7 +140,7 @@ SortList.SortOrder = Enum.SortOrder.LayoutOrder
 SortList.Parent = SortFrame
 
 local function SortEmotes()
-    for i,Emote in pairs(Emotes) do
+    for i, Emote in pairs(Emotes) do
         local EmoteButton = Frame:FindFirstChild(Emote.id)
         if not EmoteButton then
             continue
@@ -264,12 +225,12 @@ SearchBar.BackgroundTransparency = 0.3
 SearchBar:GetPropertyChangedSignal("Text"):Connect(function()
     local text = SearchBar.Text:lower()
     local buttons = Frame:GetChildren()
-    if text ~= text:sub(1,50) then
-        SearchBar.Text = SearchBar.Text:sub(1,50)
+    if text ~= text:sub(1, 50) then
+        SearchBar.Text = SearchBar.Text:sub(1, 50)
         text = SearchBar.Text:lower()
     end
-    if text ~= ""  then
-        for i,button in pairs(buttons) do
+    if text ~= "" then
+        for i, button in pairs(buttons) do
             if button:IsA("GuiButton") then
                 local name = button:GetAttribute("name"):lower()
                 if name:match(text) then
@@ -280,7 +241,7 @@ SearchBar:GetPropertyChangedSignal("Text"):Connect(function()
             end
         end
     else
-        for i,button in pairs(buttons) do
+        for i, button in pairs(buttons) do
             if button:IsA("GuiButton") then
                 button.Visible = true
             end
@@ -290,146 +251,65 @@ end)
 Corner:Clone().Parent = SearchBar
 SearchBar.Parent = BackFrame
 
-local function openemotes(name, state, input)
-    if state == Enum.UserInputState.Begin then
-        BackFrame.Visible = not BackFrame.Visible
-        Open.Text = "Open"
-    end
+-- Long press detection and creating a shortcut
+local function CreateDraggableShortcut(emoteId, emoteIcon)
+    local ShortcutButton = Instance.new("ImageButton")
+    ShortcutButton.Image = emoteIcon
+    ShortcutButton.Size = UDim2.new(0.1, 0, 0.1, 0)
+    ShortcutButton.Position = UDim2.new(0.5, 0, 0.5, 0) -- Initial position
+    ShortcutButton.BackgroundTransparency = 0.2
+    ShortcutButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    ShortcutButton.AnchorPoint = Vector2.new(0.5, 0.5)
+    ShortcutButton.Parent = ScreenGui
+    ShortcutButton.Draggable = true
+    ShortcutButton.Transparency = 0.8
+
+    -- When the shortcut button is clicked, play the emote
+    ShortcutButton.MouseButton1Click:Connect(function()
+        local Humanoid = Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if Humanoid then
+            Humanoid:PlayEmoteAndGetAnimTrackById(emoteId)
+        end
+    end)
 end
 
-ContextActionService:BindCoreActionAtPriority(
-    "Emote Menu",
-    openemotes,
-    true,
-    2001,
-    Enum.KeyCode.Comma
-)
+local function DetectLongPress(EmoteButton, emoteId, emoteIcon)
+    local startTime
 
-local inputconnect
-ScreenGui:GetPropertyChangedSignal("Enabled"):Connect(function()
-    if BackFrame.Visible == false then
-        EmoteName.Text = "Select an Emote"
-        SearchBar.Text = ""
-        SortFrame.Visible = false
-        GuiService:SetEmotesMenuOpen(false)
-        inputconnect = UserInputService.InputBegan:Connect(function(input, processed)
-            if not processed then
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                    BackFrame.Visible = false
-                    Open.Text = "Open"
-                end
+    EmoteButton.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            startTime = tick()
+        end
+    end)
+
+    EmoteButton.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            if tick() - startTime >= LongPressDuration then
+                -- Long press detected, create draggable shortcut
+                CreateDraggableShortcut(emoteId, emoteIcon)
             end
-        end)
-    else
-        inputconnect:Disconnect()
-    end
-end)
-
-GuiService.EmotesMenuOpenChanged:Connect(function(isopen)
-    if isopen then
-        BackFrame.Visible = false
-        Open.Text = "Open"
-    end
-end)
-
-GuiService.MenuOpened:Connect(function()
-    BackFrame.Visible = false
-    Open.Text = "Open"
-end)
-
-if not game:IsLoaded() then
-    game.Loaded:Wait()
-end
-
-local SynV3 = syn and DrawingImmediate
-if (not is_sirhurt_closure) and (not SynV3) and (syn and syn.protect_gui) then
-    syn.protect_gui(ScreenGui)
-    ScreenGui.Parent = CoreGui
-elseif get_hidden_gui or gethui then
-    local hiddenUI = get_hidden_gui or gethui
-    ScreenGui.Parent = hiddenUI()
-else
-    ScreenGui.Parent = CoreGui
-end
-
-local function SendNotification(title, text)
-    if syn and syn.toast_notification then
-        syn.toast_notification({
-            Type = ToastType.Error,
-            Title = title,
-            Content = text
-        })
-    else
-        StarterGui:SetCore("SendNotification", {
-            Title = title,
-            Text = text
-        })
-    end
-end
-
-local LocalPlayer = Players.LocalPlayer
-
-local function PlayEmote(name: string, id: IntValue)
-    BackFrame.Visible = false
-    Open.Text = "Open"
-    SearchBar.Text = ""
-    local Humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-    local Description = Humanoid and Humanoid:FindFirstChildOfClass("HumanoidDescription")
-    if not Description then
-        return
-    end
-    if LocalPlayer.Character.Humanoid.RigType ~= Enum.HumanoidRigType.R6 then
-        local succ, err = pcall(function()
-            Humanoid:PlayEmoteAndGetAnimTrackById(id)
-        end)
-        if not succ then
-            Description:AddEmote(name, id)
-            Humanoid:PlayEmoteAndGetAnimTrackById(id)
         end
-    else
-        SendNotification(
-            "r6? lol",
-            "you gotta be r15 dude"
-        )
-    end
+    end)
 end
 
-local function WaitForChildOfClass(parent, class)
-    local child = parent:FindFirstChildOfClass(class)
-    while not child or child.ClassName ~= class do
-        child = parent.ChildAdded:Wait()
-    end
-    return child
+-- Function to handle emote buttons
+local function AddEmoteButton(emote)
+    local EmoteButton = Instance.new("ImageButton")
+    EmoteButton.Size = UDim2.new(0.1, 0, 0.1, 0)
+    EmoteButton.Position = UDim2.new(0.5, 0, 0.5, 0)
+    EmoteButton.Image = emote.icon
+    EmoteButton.Parent = BackFrame
+
+    -- Detect long press for creating shortcuts
+    DetectLongPress(EmoteButton, emote.id, emote.icon)
 end
 
-local Cursor = ""
-while true do
-    local function Request()
-        local success, Response = pcall(function()
-            return game:HttpGetAsync("https://catalog.roblox.com/v1/search/items/details?Category=12&Subcategory=39&SortType=1&SortAggregation=&limit=30&IncludeNotForSale=true&cursor=".. Cursor)
-        end)
-        if not success then
-            task.wait(10)
-            return Request()
-        end
-        return Response
-    end
-    local Response = Request()
-    local Body = HttpService:JSONDecode(Response)
-    for i,v in pairs(Body.data) do
-        AddEmote(v.name, v.id, v.price)
-    end
-    if Body.nextPageCursor ~= nil then
-        Cursor = Body.nextPageCursor
-    else
-        break
-    end
-end
+-- Example usage with an emote
+AddEmote("Wave", 123456789, 50) -- Add your emotes here
+AddEmoteButton(Emotes[1]) -- Example usage to add an emote button to the screen
 
---unreleased emotes
-AddEmote("Arm Wave", 5915773155)
-AddEmote("Head Banging", 5915779725)
-AddEmote("Face Calisthenics", 9830731012)
+-- Rest of the original script continues...
+
 
 -- Wait for emotes to finish loading
 local function EmotesLoaded()
