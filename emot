@@ -44,7 +44,7 @@ MainFrame.Visible = false
 
 -- Add a UI grid layout to organize emote buttons
 local EmoteGrid = Instance.new("UIGridLayout", MainFrame)
-EmoteGrid.CellSize = UDim2.new(0.15, 0, 0.15, 0) -- Adjusted to smaller size
+EmoteGrid.CellSize = UDim2.new(0.15, 0, 0.15, 0) -- Smaller button size
 EmoteGrid.CellPadding = UDim2.new(0.01, 0, 0.01, 0) -- Small padding
 EmoteGrid.FillDirection = Enum.FillDirection.Horizontal
 EmoteGrid.SortOrder = Enum.SortOrder.LayoutOrder
@@ -65,7 +65,7 @@ FavoriteLabel.TextScaled = true
 FavoriteLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 
 local FavoriteGrid = Instance.new("UIGridLayout", FavoritesFrame)
-FavoriteGrid.CellSize = UDim2.new(0.15, 0, 0.15, 0) -- Adjusted to smaller size
+FavoriteGrid.CellSize = UDim2.new(0.15, 0, 0.15, 0) -- Same size for consistency
 FavoriteGrid.CellPadding = UDim2.new(0.01, 0, 0.01, 0) -- Small padding
 FavoriteGrid.FillDirection = Enum.FillDirection.Horizontal
 FavoriteGrid.SortOrder = Enum.SortOrder.LayoutOrder
@@ -88,18 +88,18 @@ end
 
 -- Function to dynamically update canvas size
 local function UpdateCanvasSize()
-    local rows = math.ceil(#MainFrame:GetChildren() / EmoteGrid.AbsoluteContentSize.X / EmoteGrid.CellSize.X.Scale)
-    MainFrame.CanvasSize = UDim2.new(0, 0, 0, rows * EmoteGrid.AbsoluteContentSize.Y)
+    MainFrame.CanvasSize = UDim2.new(0, 0, 0, EmoteGrid.AbsoluteContentSize.Y)
 end
 
 -- Function to add an emote button to the GUI
 local function AddEmoteButton(emoteData, isFavorite)
     local EmoteButton = Instance.new("TextButton")
-    EmoteButton.Size = UDim2.new(0, 100, 0, 100)
+    EmoteButton.Size = UDim2.new(0.15, 0, 0.15, 0)
     EmoteButton.Text = emoteData.name
     EmoteButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     EmoteButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    
+    EmoteButton.BackgroundTransparency = 0.5 -- Transparent button
+
     -- Play the emote when button is clicked
     EmoteButton.MouseButton1Click:Connect(function()
         local Humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
@@ -111,14 +111,15 @@ local function AddEmoteButton(emoteData, isFavorite)
             SendNotification("R6 Rig Type Not Supported", "Emotes can only be played on R15 characters.")
         end
     end)
-    
+
     -- Create favorite toggle button
     local FavoriteToggle = Instance.new("TextButton", EmoteButton)
     FavoriteToggle.Size = UDim2.new(0.3, 0, 0.3, 0)
     FavoriteToggle.Position = UDim2.new(0.7, 0, 0, 0)
     FavoriteToggle.Text = "★"
     FavoriteToggle.TextColor3 = isFavorite and Color3.fromRGB(255, 215, 0) or Color3.fromRGB(200, 200, 200)
-    
+    FavoriteToggle.BackgroundTransparency = 1 -- Make favorite button fully transparent
+
     FavoriteToggle.MouseButton1Click:Connect(function()
         if not table.find(FavoriteEmotes, emoteData.id) then
             table.insert(FavoriteEmotes, emoteData.id)
@@ -142,7 +143,7 @@ local function AddEmoteButton(emoteData, isFavorite)
         SaveFavorites()
         UpdateCanvasSize() -- Update canvas size after favorite change
     end)
-    
+
     return EmoteButton
 end
 
