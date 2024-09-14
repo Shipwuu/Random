@@ -1,6 +1,6 @@
 -- Keybind to open the Emote GUI is "comma" -> " , " for PC
 -- Toggle button added for mobile devices
--- Made using custom GUI with Favorites
+-- Made using custom GUI with Favorites at the top and full transparency for non-button components
 
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
@@ -31,11 +31,15 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "CustomEmotesGui"
 ScreenGui.Parent = game:GetService("CoreGui")
 
--- Main frame for emotes
-local MainFrame = Instance.new("Frame", ScreenGui)
+-- Main scrollable frame for emotes
+local MainFrame = Instance.new("ScrollingFrame", ScreenGui)
 MainFrame.Size = UDim2.new(0.6, 0, 0.6, 0)
 MainFrame.Position = UDim2.new(0.2, 0, 0.2, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+MainFrame.BackgroundTransparency = 1
+MainFrame.BorderSizePixel = 0
+MainFrame.ScrollBarThickness = 5
+MainFrame.ScrollingDirection = Enum.ScrollingDirection.Y
+MainFrame.CanvasSize = UDim2.new(0, 0, 2, 0)
 MainFrame.Visible = false
 
 -- Add a UI grid layout to organize emote buttons
@@ -47,10 +51,12 @@ EmoteGrid.HorizontalAlignment = Enum.HorizontalAlignment.Center
 EmoteGrid.VerticalAlignment = Enum.VerticalAlignment.Top
 
 -- Frame for favorites
-local FavoritesFrame = Instance.new("Frame", ScreenGui)
+local FavoritesFrame = Instance.new("ScrollingFrame", ScreenGui)
 FavoritesFrame.Size = UDim2.new(0.6, 0, 0.2, 0)
 FavoritesFrame.Position = UDim2.new(0.2, 0, 0.8, 0)
-FavoritesFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+FavoritesFrame.BackgroundTransparency = 1
+FavoritesFrame.BorderSizePixel = 0
+FavoritesFrame.ScrollBarThickness = 5
 FavoritesFrame.Visible = false
 
 local FavoriteLabel = Instance.new("TextLabel", FavoritesFrame)
@@ -156,7 +162,7 @@ local function LoadEmotes()
         AddEmoteButton({
             name = emoteData.name,
             id = emoteData.id
-        }, isFavorite).Parent = MainFrame
+        }, isFavorite).Parent = isFavorite and FavoritesFrame or MainFrame
         
         if isFavorite then
             AddEmoteButton({
@@ -194,15 +200,10 @@ ContextActionService:BindAction("ToggleEmoteGui", function(_, inputState)
         MainFrame.Visible = not MainFrame.Visible
         FavoritesFrame.Visible = not FavoritesFrame.Visible
     end
-end, false, Enum.KeyCode.Comma)
+end, true, Enum.KeyCode.Comma)
 
--- Initial notification
-SendNotification("Emote GUI", "Press ',' to open the Emote GUI, or use the button for mobile.", 10)
-
--- Load emotes asynchronously
+-- Load all emotes
 LoadEmotes()
 
--- Protect the GUI if synapse or similar environment is detected
-if syn and syn.protect_gui then
-    syn.protect_gui(ScreenGui)
-end
+-- Display a notification when the emotes GUI is ready
+SendNotification("Emotes GUI", "Emotes GUI is now available. Press ',' or use the button to toggle.")
