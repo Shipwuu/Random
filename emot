@@ -12,16 +12,6 @@ local LoadedEmotes = {}
 local IsLoaded = false
 local Cursor = ""
 
--- Function to wait for all emotes to load before showing GUI
-local function WaitForAllEmotesToLoad()
-    for _, loaded in pairs(LoadedEmotes) do
-        if not loaded then
-            return false
-        end
-    end
-    return true
-end
-
 -- Destroy old instances if the script is executed twice
 if CoreGui:FindFirstChild("CustomEmotesGui") then
     CoreGui:FindFirstChild("CustomEmotesGui"):Destroy()
@@ -71,7 +61,7 @@ MainFrame.Position = UDim2.new(0.2, 0, 0.2, 0)
 MainFrame.BackgroundTransparency = 0.5
 MainFrame.ScrollBarThickness = 5
 MainFrame.Visible = false -- Hide initially
-MainFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+MainFrame.CanvasSize = UDim2.new(0, 0, 1, 0) -- Set initial canvas size
 
 -- UI grid layout for buttons
 local EmoteGrid = Instance.new("UIGridLayout", MainFrame)
@@ -142,6 +132,9 @@ local function CreateEmoteButtons()
             end
         end)
     end
+
+    -- Update ScrollFrame canvas size to accommodate all buttons
+    MainFrame.CanvasSize = UDim2.new(0, 0, 0, EmoteGrid.AbsoluteContentSize.Y + 10)
 end
 
 -- Toggle the emote GUI visibility
@@ -170,7 +163,7 @@ LoadEmotes()
 
 -- Wait for all emotes to load before showing GUI
 spawn(function()
-    while not WaitForAllEmotesToLoad() do
+    while #Emotes == 0 do
         LoadingText.Text = "Loading..."
         wait(0.5)
     end
