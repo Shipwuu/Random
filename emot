@@ -1,29 +1,28 @@
--- Roblox Emotes GUI with Loading Animation and Toggle Button
+-- Roblox Emotes GUI with Proper Button Sizing and Loading Animation
 
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local TweenService = game:GetService("TweenService")
 local ContextActionService = game:GetService("ContextActionService")
 local StarterGui = game:GetService("StarterGui")
-local GuiService = game:GetService("GuiService")
 local CoreGui = game:GetService("CoreGui")
+local MarketplaceService = game:GetService("MarketplaceService")
 
 local LocalPlayer = Players.LocalPlayer
 local Emotes = {}
 local FavoriteEmotes = {}
 local LoadedEmotes = {}
-local Cursor = ""
 local IsLoaded = false
-local IsGUIVisible = false
+local Cursor = ""
 
--- Load favorites from local file
-if isfile("FavoritedEmotes.txt") then
-    local success, result = pcall(function()
-        return HttpService:JSONDecode(readfile("FavoritedEmotes.txt"))
-    end)
-    if success then
-        FavoriteEmotes = result
+-- Function to wait for all emotes to load before showing GUI
+local function WaitForAllEmotesToLoad()
+    for _, loaded in pairs(LoadedEmotes) do
+        if not loaded then
+            return false
+        end
     end
+    return true
 end
 
 -- Main GUI setup
@@ -51,83 +50,47 @@ LoadingText.Font = Enum.Font.GothamBold
 LoadingText.TextScaled = true
 LoadingText.BackgroundTransparency = 1
 
--- Tweening function for fade-in and fade-out animation
-local function TweenTransparency(object, targetTransparency, duration)
-    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
-    local goal = {BackgroundTransparency = targetTransparency}
-    local tween = TweenService:Create(object, tweenInfo, goal)
-    tween:Play()
+-- Toggle button to show and hide the emote GUI
+local ToggleButton = Instance.new("TextButton", ScreenGui)
+ToggleButton.Size = UDim2.new(0.1, 0, 0.05, 0)
+ToggleButton.Position = UDim2.new(0.9, -50, 0.9, -50)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+ToggleButton.BackgroundTransparency = 0.5
+ToggleButton.Text = "Show Emotes"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.TextScaled = true
+local ToggleCorner = Instance.new("UICorner", ToggleButton)
+ToggleCorner.CornerRadius = UDim.new(0.2, 0)
+
+-- Main scrollable frame for emotes
+local MainFrame = Instance.new("ScrollingFrame", ScreenGui)
+MainFrame.Size = UDim2.new(0.6, 0, 0.6, 0)
+MainFrame.Position = UDim2.new(0.2, 0, 0.2, 0)
+MainFrame.BackgroundTransparency = 0.5
+MainFrame.ScrollBarThickness = 5
+MainFrame.Visible = false -- Hide initially
+MainFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+
+-- UI grid layout for buttons
+local EmoteGrid = Instance.new("UIGridLayout", MainFrame)
+EmoteGrid.CellSize = UDim2.new(0.15, 0, 0.15, 0)
+EmoteGrid.CellPadding = UDim2.new(0.01, 0, 0.01, 0)
+EmoteGrid.SortOrder = Enum.SortOrder.LayoutOrder
+
+-- Add emotes after everything is loaded
+local function AddEmote(name, id)
+    table.insert(Emotes, {
+        name = name,
+        id = id
+    })
 end
 
--- Function to animate the loading text
-local function AnimateLoadingText()
-    while not IsLoaded do
-        LoadingText.Text = "Loading."
-        wait(0.5)
-        LoadingText.Text = "Loading.."
-        wait(0.5)
-        LoadingText.Text = "Loading..."
-        wait(0.5)
-    end
-    LoadingText.Text = "Emotes Loaded"
-end
-
--- Show loading frame with fade-in and fade-out animation
-TweenTransparency(LoadingFrame, 0.5, 1) -- Fade in
-
--- Function to load emotes
-local function LoadEmotes()
-    local function RequestEmotes()
-        local success, Response = pcall(function()
-            return game:HttpGetAsync("https://catalog.roblox.com/v1/search/items/details?Category=12&Subcategory=39&SortType=1&limit=30&IncludeNotForSale=true&cursor="..Cursor)
-        end)
-        if not success then
-            task.wait(5)
-            return RequestEmotes()
-        end
-        return Response
-    end
-
-    local Response = RequestEmotes()
-    local Body = HttpService:JSONDecode(Response)
-
-    -- Process emotes
-    for _, emoteData in pairs(Body.data) do
-        table.insert(Emotes, {
-            name = emoteData.name,
-            id = emoteData.id
-        })
-    end
-
-    -- Handle next page of emotes
-    if Body.nextPageCursor then
-        Cursor = Body.nextPageCursor
-        LoadEmotes()
-    else
-        IsLoaded = true
-    end
-end
-
--- Function to build the GUI once all emotes are loaded
-local function BuildEmoteGUI()
-    -- Main scrollable frame for emotes
-    local MainFrame = Instance.new("ScrollingFrame", ScreenGui)
-    MainFrame.Size = UDim2.new(0.6, 0, 0.6, 0)
-    MainFrame.Position = UDim2.new(0.2, 0, 0.2, 0)
-    MainFrame.BackgroundTransparency = 0.5
-    MainFrame.ScrollBarThickness = 5
-    MainFrame.Visible = false -- Hide initially
-
-    -- UI grid layout for buttons
-    local EmoteGrid = Instance.new("UIGridLayout", MainFrame)
-    EmoteGrid.CellSize = UDim2.new(0.15, 0, 0.15, 0)
-    EmoteGrid.CellPadding = UDim2.new(0.01, 0, 0.01, 0)
-
-    -- Create emote buttons
-    for _, emoteData in pairs(Emotes) do
+-- Function to create emote buttons
+local function CreateEmoteButtons()
+    for _, emote in pairs(Emotes) do
         local EmoteButton = Instance.new("TextButton", MainFrame)
         EmoteButton.Size = UDim2.new(0.15, 0, 0.15, 0)
-        EmoteButton.Text = emoteData.name
+        EmoteButton.Text = emote.name
         EmoteButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
         EmoteButton.TextColor3 = Color3.fromRGB(255, 255, 255)
         EmoteButton.BackgroundTransparency = 0.5
@@ -141,15 +104,9 @@ local function BuildEmoteGUI()
             local Humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
             if Humanoid and Humanoid.RigType == Enum.HumanoidRigType.R15 then
                 pcall(function()
-                    Humanoid:PlayEmoteAndGetAnimTrackById(emoteData.id)
+                    Humanoid:PlayEmoteAndGetAnimTrackById(emote.id)
                 end)
                 MainFrame.Visible = false -- Hide frame when emote is selected
-            else
-                StarterGui:SetCore("SendNotification", {
-                    Title = "R6 Rig Type Not Supported",
-                    Text = "Emotes can only be played on R15 characters.",
-                    Duration = 5
-                })
             end
         end)
 
@@ -169,58 +126,44 @@ local function BuildEmoteGUI()
 
         -- Add to favorites
         FavoriteButton.MouseButton1Click:Connect(function()
-            if not table.find(FavoriteEmotes, emoteData.id) then
-                table.insert(FavoriteEmotes, emoteData.id)
+            if not table.find(FavoriteEmotes, emote.id) then
+                table.insert(FavoriteEmotes, emote.id)
                 writefile("FavoritedEmotes.txt", HttpService:JSONEncode(FavoriteEmotes))
-                StarterGui:SetCore("SendNotification", {
-                    Title = "Favorited",
-                    Text = emoteData.name .. " added to favorites!",
-                    Duration = 3
-                })
-            else
-                StarterGui:SetCore("SendNotification", {
-                    Title = "Already in Favorites",
-                    Text = emoteData.name .. " is already a favorite.",
-                    Duration = 3
-                })
             end
         end)
     end
-
-    -- Update canvas size for scrolling
-    MainFrame.CanvasSize = UDim2.new(0, 0, 0, EmoteGrid.AbsoluteContentSize.Y)
-
-    -- Toggle button to show and hide the emote GUI
-    local ToggleButton = Instance.new("TextButton", ScreenGui)
-    ToggleButton.Size = UDim2.new(0.1, 0, 0.05, 0)
-    ToggleButton.Position = UDim2.new(0.9, -50, 0.9, -50)
-    ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    ToggleButton.BackgroundTransparency = 0.5
-    ToggleButton.Text = "Show Emotes"
-    ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ToggleButton.TextScaled = true
-    local ToggleCorner = Instance.new("UICorner", ToggleButton)
-    ToggleCorner.CornerRadius = UDim.new(0.2, 0)
-
-    -- Toggle the emote GUI visibility
-    ToggleButton.MouseButton1Click:Connect(function()
-        IsGUIVisible = not IsGUIVisible
-        MainFrame.Visible = IsGUIVisible
-        ToggleButton.Text = IsGUIVisible and "Hide Emotes" or "Show Emotes"
-    end)
 end
 
--- Load emotes and display loading text animation
-spawn(function()
-    AnimateLoadingText() -- Animate the loading text in a separate thread
+-- Toggle the emote GUI visibility
+ToggleButton.MouseButton1Click:Connect(function()
+    IsLoaded = not IsLoaded
+    MainFrame.Visible = IsLoaded
+    ToggleButton.Text = IsLoaded and "Hide Emotes" or "Show Emotes"
 end)
+
+-- Function to load emotes from the API
+local function LoadEmotes()
+    local success, Response = pcall(function()
+        return game:HttpGetAsync("https://catalog.roblox.com/v1/search/items/details?Category=12&Subcategory=39&SortType=1&limit=30")
+    end)
+
+    if success then
+        local Body = HttpService:JSONDecode(Response)
+        for _, emoteData in pairs(Body.data) do
+            AddEmote(emoteData.name, emoteData.id)
+        end
+    end
+end
+
+-- Start loading emotes
 LoadEmotes()
 
--- Wait for emotes to finish loading
-repeat wait() until IsLoaded
-
--- Build the GUI and hide the loading frame with fade-out animation
-BuildEmoteGUI()
-TweenTransparency(LoadingFrame, 1, 1) -- Fade out
-wait(1)
-LoadingFrame:Destroy()
+-- Wait for all emotes to load before showing GUI
+spawn(function()
+    while not WaitForAllEmotesToLoad() do
+        wait(0.1)
+    end
+    IsLoaded = true
+    LoadingText.Text = "Emotes Loaded"
+    CreateEmoteButtons() -- Now create the buttons
+end)
