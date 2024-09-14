@@ -8,10 +8,8 @@ local UserInputService = game:GetService("UserInputService")
 
 local Emotes = {}
 local LoadedEmotes = {}
-local FavoritedEmotes = {}
 
-local Cursor = ""
-local IsLoaded = false
+local IsLoaded = false -- Track if emote frame is shown
 
 -- Destroy any existing GUI instances if the script runs again
 if CoreGui:FindFirstChild("CustomEmotesGui") then
@@ -110,28 +108,6 @@ local function CreateEmoteButtons()
                 ToggleButton.Text = "Show Emotes" -- Reset the toggle button text
             end
         end)
-
-        -- Favorite button
-        local FavoriteButton = Instance.new("TextButton", EmoteButton)
-        FavoriteButton.Size = UDim2.new(0.3, 0, 0.3, 0)
-        FavoriteButton.Position = UDim2.new(0.65, 0, 0.1, 0)
-        FavoriteButton.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
-        FavoriteButton.Text = "⭐"
-        FavoriteButton.TextScaled = true
-        FavoriteButton.TextColor3 = Color3.new(1, 1, 1)
-        FavoriteButton.BackgroundTransparency = 0.5
-        FavoriteButton.BorderSizePixel = 0
-
-        local FavoriteCorner = Instance.new("UICorner", FavoriteButton)
-        FavoriteCorner.CornerRadius = UDim.new(0.5, 0)
-
-        -- Add to favorites
-        FavoriteButton.MouseButton1Click:Connect(function()
-            if not table.find(FavoritedEmotes, emote.id) then
-                table.insert(FavoritedEmotes, emote.id)
-                writefile("FavoritedEmotes.txt", HttpService:JSONEncode(FavoritedEmotes))
-            end
-        end)
     end
 
     -- Update ScrollFrame canvas size to fit all buttons
@@ -169,4 +145,3 @@ spawn(function()
     LoadingFrame:Destroy()
     CreateEmoteButtons()
 end)
-
