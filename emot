@@ -143,11 +143,45 @@ local function BuildEmoteGUI()
                 pcall(function()
                     Humanoid:PlayEmoteAndGetAnimTrackById(emoteData.id)
                 end)
+                MainFrame.Visible = false -- Hide frame when emote is selected
             else
                 StarterGui:SetCore("SendNotification", {
                     Title = "R6 Rig Type Not Supported",
                     Text = "Emotes can only be played on R15 characters.",
                     Duration = 5
+                })
+            end
+        end)
+
+        -- Favorite button
+        local FavoriteButton = Instance.new("TextButton", EmoteButton)
+        FavoriteButton.Size = UDim2.new(0.3, 0, 0.3, 0)
+        FavoriteButton.Position = UDim2.new(0.65, 0, 0.1, 0)
+        FavoriteButton.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+        FavoriteButton.Text = "⭐"
+        FavoriteButton.TextScaled = true
+        FavoriteButton.TextColor3 = Color3.new(1, 1, 1)
+        FavoriteButton.BackgroundTransparency = 0.5
+        FavoriteButton.BorderSizePixel = 0
+
+        local FavoriteCorner = Instance.new("UICorner", FavoriteButton)
+        FavoriteCorner.CornerRadius = UDim.new(0.5, 0)
+
+        -- Add to favorites
+        FavoriteButton.MouseButton1Click:Connect(function()
+            if not table.find(FavoriteEmotes, emoteData.id) then
+                table.insert(FavoriteEmotes, emoteData.id)
+                writefile("FavoritedEmotes.txt", HttpService:JSONEncode(FavoriteEmotes))
+                StarterGui:SetCore("SendNotification", {
+                    Title = "Favorited",
+                    Text = emoteData.name .. " added to favorites!",
+                    Duration = 3
+                })
+            else
+                StarterGui:SetCore("SendNotification", {
+                    Title = "Already in Favorites",
+                    Text = emoteData.name .. " is already a favorite.",
+                    Duration = 3
                 })
             end
         end)
