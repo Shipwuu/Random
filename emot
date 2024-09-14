@@ -39,7 +39,7 @@ MainFrame.BackgroundTransparency = 1 -- Full transparency
 MainFrame.BorderSizePixel = 0
 MainFrame.ScrollBarThickness = 5
 MainFrame.ScrollingDirection = Enum.ScrollingDirection.Y
-MainFrame.CanvasSize = UDim2.new(0, 0, 2, 0) -- Adjust dynamically later
+MainFrame.CanvasSize = UDim2.new(0, 0, 0, 0) -- We will calculate dynamically
 MainFrame.Visible = false
 
 -- Add a UI grid layout to organize emote buttons
@@ -84,6 +84,12 @@ end
 -- Save favorites to local file
 local function SaveFavorites()
     writefile("FavoritedEmotes.txt", HttpService:JSONEncode(FavoriteEmotes))
+end
+
+-- Function to dynamically update canvas size
+local function UpdateCanvasSize()
+    local rows = math.ceil(#MainFrame:GetChildren() / EmoteGrid.AbsoluteContentSize.X / EmoteGrid.CellSize.X.Scale)
+    MainFrame.CanvasSize = UDim2.new(0, 0, 0, rows * EmoteGrid.AbsoluteContentSize.Y)
 end
 
 -- Function to add an emote button to the GUI
@@ -134,6 +140,7 @@ local function AddEmoteButton(emoteData, isFavorite)
             end
         end
         SaveFavorites()
+        UpdateCanvasSize() -- Update canvas size after favorite change
     end)
     
     return EmoteButton
@@ -171,8 +178,7 @@ local function LoadEmotes()
         end
     end
 
-    -- Adjust canvas size based on content
-    MainFrame.CanvasSize = UDim2.new(0, 0, 0, #MainFrame:GetChildren() * 110)
+    UpdateCanvasSize() -- Recalculate canvas size after loading emotes
 
     -- Handle pagination if more emotes are available
     if Body.nextPageCursor then
@@ -183,20 +189,19 @@ end
 
 -- Toggle button for mobile devices
 local ToggleButton = Instance.new("TextButton", ScreenGui)
-ToggleButton.Size = UDim2.new(0.1, 0, 0.1, 0)
-ToggleButton.Position = UDim2.new(0.9, -20, 0.9, -20)
-ToggleButton.Text = "Toggle Emotes"
-ToggleButton.TextScaled = true
-ToggleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+ToggleButton.Size = UDim2.new(0.1, 0, 0.05, 0)
+ToggleButton.Position = UDim2.new(0.9, 0, 0.9, 0)
+ToggleButton.Text = "Emotes"
+ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.Visible = true
 
--- Toggle the visibility of the Emote GUI when the button is clicked
 ToggleButton.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
     FavoritesFrame.Visible = not FavoritesFrame.Visible
 end)
 
--- Bind the comma key to toggle the GUI for PC users
+-- Bind the toggle to a key (comma) for PC users
 ContextActionService:BindAction("ToggleEmotes", function(_, state)
     if state == Enum.UserInputState.Begin then
         MainFrame.Visible = not MainFrame.Visible
