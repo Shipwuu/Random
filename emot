@@ -44,7 +44,8 @@ MainFrame.Visible = false
 
 -- Add a UI grid layout to organize emote buttons
 local EmoteGrid = Instance.new("UIGridLayout", MainFrame)
-EmoteGrid.CellSize = UDim2.new(0.2, 0, 0.2, 0)
+EmoteGrid.CellSize = UDim2.new(0.15, 0, 0.15, 0) -- Adjusted to smaller size
+EmoteGrid.CellPadding = UDim2.new(0.01, 0, 0.01, 0) -- Small padding
 EmoteGrid.FillDirection = Enum.FillDirection.Horizontal
 EmoteGrid.SortOrder = Enum.SortOrder.LayoutOrder
 EmoteGrid.HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -64,7 +65,8 @@ FavoriteLabel.TextScaled = true
 FavoriteLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 
 local FavoriteGrid = Instance.new("UIGridLayout", FavoritesFrame)
-FavoriteGrid.CellSize = UDim2.new(0.2, 0, 0.6, 0)
+FavoriteGrid.CellSize = UDim2.new(0.15, 0, 0.15, 0) -- Adjusted to smaller size
+FavoriteGrid.CellPadding = UDim2.new(0.01, 0, 0.01, 0) -- Small padding
 FavoriteGrid.FillDirection = Enum.FillDirection.Horizontal
 FavoriteGrid.SortOrder = Enum.SortOrder.LayoutOrder
 FavoriteGrid.HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -195,8 +197,8 @@ ToggleButton.MouseButton1Click:Connect(function()
 end)
 
 -- Bind the comma key to toggle the GUI for PC users
-ContextActionService:BindAction("ToggleEmoteGui", function(_, inputState)
-    if inputState == Enum.UserInputState.Begin then
+ContextActionService:BindAction("ToggleEmotes", function(_, state)
+    if state == Enum.UserInputState.Begin then
         MainFrame.Visible = not MainFrame.Visible
         FavoritesFrame.Visible = not FavoritesFrame.Visible
     end
@@ -206,4 +208,4 @@ end, true, Enum.KeyCode.Comma)
 LoadEmotes()
 
 -- Display a notification when the emotes GUI is ready
-SendNotification("Emotes GUI", "Emotes GUI is now available. Press ',' or use the button to toggle shutttt.")
+SendNotification("Emotes GUI", "Emotes GUI is now available. Press ',' or use the button to toggle.")
