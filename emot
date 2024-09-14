@@ -1,9 +1,9 @@
--- Keybind to open for pc is "comma" -> " , "
+-- Keybind to open for PC is "comma" -> " , "
 -- Made by Gi#7331
 
 game:GetService("StarterGui"):SetCore("SendNotification", {
     Title = "Tips!",
-    Text = "Wait 1 - 15 seconds to show gui if it doesn't show, try executing again.",
+    Text = "Wait 1 - 15 seconds to show GUI. If it doesn't show, try executing again.",
     Duration = 15
 })
 
@@ -24,6 +24,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Emotes = {}
 local LoadedEmotes = {}
+
 local function AddEmote(name: string, id: IntValue, price: IntValue?)
 	LoadedEmotes[id] = false
 	task.spawn(function()
@@ -61,7 +62,6 @@ local function AddEmote(name: string, id: IntValue, price: IntValue?)
 end
 
 local CurrentSort = "recentfirst"
-
 local FavoriteOff = "rbxassetid://10651060677"
 local FavoriteOn = "rbxassetid://10651061109"
 local FavoritedEmotes = {}
@@ -70,12 +70,12 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "Emotes"
 ScreenGui.DisplayOrder = 2
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.Enabled = true
+ScreenGui.Parent = CoreGui -- Ensuring it is parented properly
 
 -- Loading Screen
 local LoadingFrame = Instance.new("Frame", ScreenGui)
 LoadingFrame.Size = UDim2.new(0.3, 0, 0.1, 0)
-LoadingFrame.Position = UDim2.new(0.35, 0, 0.1, 0)
+LoadingFrame.Position = UDim2.new(0.35, 0, 0.4, 0) -- Centered
 LoadingFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 LoadingFrame.BackgroundTransparency = 0.5
 LoadingFrame.BorderSizePixel = 0
@@ -102,17 +102,20 @@ BackFrame.BorderSizePixel = 0
 BackFrame.Parent = ScreenGui
 BackFrame.Visible = false -- Hide until loaded
 
+-- Toggle Button for opening/closing GUI
 local Open = Instance.new("TextButton")
 Open.Name = "Open"
 Open.Parent = ScreenGui
-Open.Draggable = true
-Open.Size = UDim2.new(0.05, 0, 0.114, 0)
-Open.Position = UDim2.new(0.05, 0, 0.25, 0)
+Open.Size = UDim2.new(0.1, 0, 0.05, 0)
+Open.Position = UDim2.new(0.9, -50, 0.1, 0) -- Positioned at the top-right
 Open.Text = "Close"
 Open.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 Open.TextColor3 = Color3.fromRGB(255, 255, 255)
 Open.TextScaled = true
 Open.BackgroundTransparency = 0.5
+
+-- Making the button visible by setting its ZIndex high enough
+Open.ZIndex = 100
 
 Open.MouseButton1Up:Connect(function()
     if Open.Text == "Open" then
@@ -128,9 +131,7 @@ UICorner.Name = "UICorner"
 UICorner.Parent = Open
 UICorner.CornerRadius = UDim.new(1, 0)
 
--- Other GUI elements are placed within BackFrame (like EmoteName, SortingFrame, etc.)
-
--- Emote fetching and logic
+-- Fetch Emotes Logic
 local Cursor = ""
 while true do
 	local function Request()
