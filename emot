@@ -93,21 +93,25 @@ LoadingText.BackgroundTransparency = 1
 
 -- Main GUI Frame
 local BackFrame = Instance.new("Frame")
-BackFrame.Size = UDim2.new(0.9, 0, 0.5, 0)
+BackFrame.Size = UDim2.new(0.8, 0, 0.6, 0) -- Responsive size for both PC and mobile
 BackFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-BackFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-BackFrame.SizeConstraint = Enum.SizeConstraint.RelativeYY
-BackFrame.BackgroundTransparency = 1
+BackFrame.Position = UDim2.new(0.5, 0, 0.5, 0) -- Centered
+BackFrame.BackgroundTransparency = 0.2
+BackFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 BackFrame.BorderSizePixel = 0
 BackFrame.Parent = ScreenGui
 BackFrame.Visible = false -- Hide until loaded
+
+-- UI aspect ratio constraint to ensure it scales well on mobile and PC
+local AspectRatio = Instance.new("UIAspectRatioConstraint", BackFrame)
+AspectRatio.AspectRatio = 1.6 -- Width to height ratio
 
 -- Toggle Button for opening/closing GUI
 local Open = Instance.new("TextButton")
 Open.Name = "Open"
 Open.Parent = ScreenGui
 Open.Size = UDim2.new(0.1, 0, 0.05, 0)
-Open.Position = UDim2.new(0.9, -50, 0.1, 0) -- Positioned at the top-right
+Open.Position = UDim2.new(0.9, -50, 0.05, 0) -- Positioned at the top-right
 Open.Text = "Close"
 Open.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 Open.TextColor3 = Color3.fromRGB(255, 255, 255)
