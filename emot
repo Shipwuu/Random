@@ -1,20 +1,20 @@
--- Keybind to open the Emote GUI is "comma" -> " , " for PC
--- Toggle button added for mobile devices
--- Favorites section at the top and full transparency for non-button components
+-- Roblox Emotes GUI with Loading Animation and Toggle Button
 
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
-local MarketplaceService = game:GetService("MarketplaceService")
+local TweenService = game:GetService("TweenService")
 local ContextActionService = game:GetService("ContextActionService")
 local StarterGui = game:GetService("StarterGui")
-local UserInputService = game:GetService("UserInputService")
 local GuiService = game:GetService("GuiService")
+local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer
-local Cursor = ""
 local Emotes = {}
-local LoadedEmotes = {}
 local FavoriteEmotes = {}
+local LoadedEmotes = {}
+local Cursor = ""
+local IsLoaded = false
+local IsGUIVisible = false
 
 -- Load favorites from local file
 if isfile("FavoritedEmotes.txt") then
@@ -26,135 +26,63 @@ if isfile("FavoritedEmotes.txt") then
     end
 end
 
--- Create a new ScreenGui and add it to CoreGui
+-- Main GUI setup
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "CustomEmotesGui"
-ScreenGui.Parent = game:GetService("CoreGui")
+ScreenGui.Parent = CoreGui
 
--- Main scrollable frame for emotes
-local MainFrame = Instance.new("ScrollingFrame", ScreenGui)
-MainFrame.Size = UDim2.new(0.6, 0, 0.6, 0)
-MainFrame.Position = UDim2.new(0.2, 0, 0.2, 0)
-MainFrame.BackgroundTransparency = 1 -- Full transparency
-MainFrame.BorderSizePixel = 0
-MainFrame.ScrollBarThickness = 5
-MainFrame.ScrollingDirection = Enum.ScrollingDirection.Y
-MainFrame.CanvasSize = UDim2.new(0, 0, 0, 0) -- We will calculate dynamically
-MainFrame.Visible = false
+-- Loading frame
+local LoadingFrame = Instance.new("Frame", ScreenGui)
+LoadingFrame.Size = UDim2.new(0.3, 0, 0.1, 0)
+LoadingFrame.Position = UDim2.new(0.35, 0, 0.1, 0)
+LoadingFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+LoadingFrame.BackgroundTransparency = 0.5
+LoadingFrame.BorderSizePixel = 0
 
--- Add a UI grid layout to organize emote buttons
-local EmoteGrid = Instance.new("UIGridLayout", MainFrame)
-EmoteGrid.CellSize = UDim2.new(0.15, 0, 0.15, 0) -- Smaller button size
-EmoteGrid.CellPadding = UDim2.new(0.01, 0, 0.01, 0) -- Small padding
-EmoteGrid.FillDirection = Enum.FillDirection.Horizontal
-EmoteGrid.SortOrder = Enum.SortOrder.LayoutOrder
-EmoteGrid.HorizontalAlignment = Enum.HorizontalAlignment.Center
-EmoteGrid.VerticalAlignment = Enum.VerticalAlignment.Top
+local UICorner = Instance.new("UICorner", LoadingFrame)
+UICorner.CornerRadius = UDim.new(0.2, 0)
 
--- Frame for favorites (part of the scrolling frame)
-local FavoritesFrame = Instance.new("Frame", MainFrame)
-FavoritesFrame.Size = UDim2.new(1, 0, 0.3, 0) -- Adjustable height for favorites
-FavoritesFrame.BackgroundTransparency = 1
-FavoritesFrame.BorderSizePixel = 0
+-- Loading text
+local LoadingText = Instance.new("TextLabel", LoadingFrame)
+LoadingText.Size = UDim2.new(1, 0, 1, 0)
+LoadingText.Text = "Loading..."
+LoadingText.TextColor3 = Color3.fromRGB(255, 255, 255)
+LoadingText.Font = Enum.Font.GothamBold
+LoadingText.TextScaled = true
+LoadingText.BackgroundTransparency = 1
 
-local FavoriteLabel = Instance.new("TextLabel", FavoritesFrame)
-FavoriteLabel.Size = UDim2.new(1, 0, 0.2, 0)
-FavoriteLabel.Text = "Favorite Emotes"
-FavoriteLabel.BackgroundTransparency = 1
-FavoriteLabel.TextScaled = true
-FavoriteLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-
-local FavoriteGrid = Instance.new("UIGridLayout", FavoritesFrame)
-FavoriteGrid.CellSize = UDim2.new(0.15, 0, 0.15, 0) -- Same size for consistency
-FavoriteGrid.CellPadding = UDim2.new(0.01, 0, 0.01, 0) -- Small padding
-FavoriteGrid.FillDirection = Enum.FillDirection.Horizontal
-FavoriteGrid.SortOrder = Enum.SortOrder.LayoutOrder
-FavoriteGrid.HorizontalAlignment = Enum.HorizontalAlignment.Center
-FavoriteGrid.VerticalAlignment = Enum.VerticalAlignment.Top
-
--- Create a function to display notification
-local function SendNotification(title, text, duration)
-    StarterGui:SetCore("SendNotification", {
-        Title = title,
-        Text = text,
-        Duration = duration or 5
-    })
+-- Tweening function for fade-in and fade-out animation
+local function TweenTransparency(object, targetTransparency, duration)
+    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
+    local goal = {BackgroundTransparency = targetTransparency}
+    local tween = TweenService:Create(object, tweenInfo, goal)
+    tween:Play()
 end
 
--- Save favorites to local file
-local function SaveFavorites()
-    writefile("FavoritedEmotes.txt", HttpService:JSONEncode(FavoriteEmotes))
+-- Function to animate the loading text
+local function AnimateLoadingText()
+    while not IsLoaded do
+        LoadingText.Text = "Loading."
+        wait(0.5)
+        LoadingText.Text = "Loading.."
+        wait(0.5)
+        LoadingText.Text = "Loading..."
+        wait(0.5)
+    end
+    LoadingText.Text = "Emotes Loaded"
 end
 
--- Function to dynamically update canvas size
-local function UpdateCanvasSize()
-    MainFrame.CanvasSize = UDim2.new(0, 0, 0, EmoteGrid.AbsoluteContentSize.Y)
-end
+-- Show loading frame with fade-in and fade-out animation
+TweenTransparency(LoadingFrame, 0.5, 1) -- Fade in
 
--- Function to add an emote button to the GUI
-local function AddEmoteButton(emoteData, isFavorite)
-    local EmoteButton = Instance.new("TextButton")
-    EmoteButton.Size = UDim2.new(0.15, 0, 0.15, 0)
-    EmoteButton.Text = emoteData.name
-    EmoteButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    EmoteButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    EmoteButton.BackgroundTransparency = 0.5 -- Transparent button
-
-    -- Play the emote when button is clicked
-    EmoteButton.MouseButton1Click:Connect(function()
-        local Humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if Humanoid and Humanoid.RigType == Enum.HumanoidRigType.R15 then
-            pcall(function()
-                Humanoid:PlayEmoteAndGetAnimTrackById(emoteData.id)
-            end)
-        else
-            SendNotification("R6 Rig Type Not Supported", "Emotes can only be played on R15 characters.")
-        end
-    end)
-
-    -- Create favorite toggle button
-    local FavoriteToggle = Instance.new("TextButton", EmoteButton)
-    FavoriteToggle.Size = UDim2.new(0.3, 0, 0.3, 0)
-    FavoriteToggle.Position = UDim2.new(0.7, 0, 0, 0)
-    FavoriteToggle.Text = "★"
-    FavoriteToggle.TextColor3 = isFavorite and Color3.fromRGB(255, 215, 0) or Color3.fromRGB(200, 200, 200)
-    FavoriteToggle.BackgroundTransparency = 1 -- Make favorite button fully transparent
-
-    FavoriteToggle.MouseButton1Click:Connect(function()
-        if not table.find(FavoriteEmotes, emoteData.id) then
-            table.insert(FavoriteEmotes, emoteData.id)
-            FavoriteToggle.TextColor3 = Color3.fromRGB(255, 215, 0)
-            AddEmoteButton(emoteData, true).Parent = FavoritesFrame -- Add to favorite frame
-        else
-            for i, v in ipairs(FavoriteEmotes) do
-                if v == emoteData.id then
-                    table.remove(FavoriteEmotes, i)
-                    break
-                end
-            end
-            FavoriteToggle.TextColor3 = Color3.fromRGB(200, 200, 200)
-            -- Remove from favorite frame
-            for _, btn in ipairs(FavoritesFrame:GetChildren()) do
-                if btn:IsA("TextButton") and btn.Text == emoteData.name then
-                    btn:Destroy()
-                end
-            end
-        end
-        SaveFavorites()
-        UpdateCanvasSize() -- Update canvas size after favorite change
-    end)
-
-    return EmoteButton
-end
-
--- Function to load all emotes
+-- Function to load emotes
 local function LoadEmotes()
     local function RequestEmotes()
         local success, Response = pcall(function()
-            return game:HttpGetAsync("https://catalog.roblox.com/v1/search/items/details?Category=12&Subcategory=39&SortType=1&limit=30&IncludeNotForSale=true&cursor=" .. Cursor)
+            return game:HttpGetAsync("https://catalog.roblox.com/v1/search/items/details?Category=12&Subcategory=39&SortType=1&limit=30&IncludeNotForSale=true&cursor="..Cursor)
         end)
         if not success then
-            task.wait(10)
+            task.wait(5)
             return RequestEmotes()
         end
         return Response
@@ -163,55 +91,102 @@ local function LoadEmotes()
     local Response = RequestEmotes()
     local Body = HttpService:JSONDecode(Response)
 
-    -- Add emotes to GUI
+    -- Process emotes
     for _, emoteData in pairs(Body.data) do
-        local isFavorite = table.find(FavoriteEmotes, emoteData.id) ~= nil
-        AddEmoteButton({
+        table.insert(Emotes, {
             name = emoteData.name,
             id = emoteData.id
-        }, isFavorite).Parent = isFavorite and FavoritesFrame or MainFrame
-        
-        if isFavorite then
-            AddEmoteButton({
-                name = emoteData.name,
-                id = emoteData.id
-            }, true).Parent = FavoritesFrame
-        end
+        })
     end
 
-    UpdateCanvasSize() -- Recalculate canvas size after loading emotes
-
-    -- Handle pagination if more emotes are available
+    -- Handle next page of emotes
     if Body.nextPageCursor then
         Cursor = Body.nextPageCursor
         LoadEmotes()
+    else
+        IsLoaded = true
     end
 end
 
--- Toggle button for mobile devices
-local ToggleButton = Instance.new("TextButton", ScreenGui)
-ToggleButton.Size = UDim2.new(0.1, 0, 0.05, 0)
-ToggleButton.Position = UDim2.new(0.9, 0, 0.9, 0)
-ToggleButton.Text = "Emotes"
-ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleButton.Visible = true
+-- Function to build the GUI once all emotes are loaded
+local function BuildEmoteGUI()
+    -- Main scrollable frame for emotes
+    local MainFrame = Instance.new("ScrollingFrame", ScreenGui)
+    MainFrame.Size = UDim2.new(0.6, 0, 0.6, 0)
+    MainFrame.Position = UDim2.new(0.2, 0, 0.2, 0)
+    MainFrame.BackgroundTransparency = 0.5
+    MainFrame.ScrollBarThickness = 5
+    MainFrame.Visible = false -- Hide initially
 
-ToggleButton.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-    FavoritesFrame.Visible = not FavoritesFrame.Visible
-end)
+    -- UI grid layout for buttons
+    local EmoteGrid = Instance.new("UIGridLayout", MainFrame)
+    EmoteGrid.CellSize = UDim2.new(0.15, 0, 0.15, 0)
+    EmoteGrid.CellPadding = UDim2.new(0.01, 0, 0.01, 0)
 
--- Bind the toggle to a key (comma) for PC users
-ContextActionService:BindAction("ToggleEmotes", function(_, state)
-    if state == Enum.UserInputState.Begin then
-        MainFrame.Visible = not MainFrame.Visible
-        FavoritesFrame.Visible = not FavoritesFrame.Visible
+    -- Create emote buttons
+    for _, emoteData in pairs(Emotes) do
+        local EmoteButton = Instance.new("TextButton", MainFrame)
+        EmoteButton.Size = UDim2.new(0.15, 0, 0.15, 0)
+        EmoteButton.Text = emoteData.name
+        EmoteButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        EmoteButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        EmoteButton.BackgroundTransparency = 0.5
+        EmoteButton.BorderSizePixel = 0
+
+        local UICorner = Instance.new("UICorner", EmoteButton)
+        UICorner.CornerRadius = UDim.new(0.2, 0)
+
+        -- Play emote on click
+        EmoteButton.MouseButton1Click:Connect(function()
+            local Humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if Humanoid and Humanoid.RigType == Enum.HumanoidRigType.R15 then
+                pcall(function()
+                    Humanoid:PlayEmoteAndGetAnimTrackById(emoteData.id)
+                end)
+            else
+                StarterGui:SetCore("SendNotification", {
+                    Title = "R6 Rig Type Not Supported",
+                    Text = "Emotes can only be played on R15 characters.",
+                    Duration = 5
+                })
+            end
+        end)
     end
-end, true, Enum.KeyCode.Comma)
 
--- Load all emotes
+    -- Update canvas size for scrolling
+    MainFrame.CanvasSize = UDim2.new(0, 0, 0, EmoteGrid.AbsoluteContentSize.Y)
+
+    -- Toggle button to show and hide the emote GUI
+    local ToggleButton = Instance.new("TextButton", ScreenGui)
+    ToggleButton.Size = UDim2.new(0.1, 0, 0.05, 0)
+    ToggleButton.Position = UDim2.new(0.9, -50, 0.9, -50)
+    ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    ToggleButton.BackgroundTransparency = 0.5
+    ToggleButton.Text = "Show Emotes"
+    ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ToggleButton.TextScaled = true
+    local ToggleCorner = Instance.new("UICorner", ToggleButton)
+    ToggleCorner.CornerRadius = UDim.new(0.2, 0)
+
+    -- Toggle the emote GUI visibility
+    ToggleButton.MouseButton1Click:Connect(function()
+        IsGUIVisible = not IsGUIVisible
+        MainFrame.Visible = IsGUIVisible
+        ToggleButton.Text = IsGUIVisible and "Hide Emotes" or "Show Emotes"
+    end)
+end
+
+-- Load emotes and display loading text animation
+spawn(function()
+    AnimateLoadingText() -- Animate the loading text in a separate thread
+end)
 LoadEmotes()
 
--- Display a notification when the emotes GUI is ready
-SendNotification("Emotes GUI", "Emotes GUI is now available. Press ',' or use the button to toggle.")
+-- Wait for emotes to finish loading
+repeat wait() until IsLoaded
+
+-- Build the GUI and hide the loading frame with fade-out animation
+BuildEmoteGUI()
+TweenTransparency(LoadingFrame, 1, 1) -- Fade out
+wait(1)
+LoadingFrame:Destroy()
