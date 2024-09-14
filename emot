@@ -1,4 +1,5 @@
--- Keybind to open the Emote GUI is "comma" -> " , "
+-- Keybind to open the Emote GUI is "comma" -> " , " for PC
+-- Toggle button added for mobile devices
 -- Made using custom GUI with Favorites
 
 local Players = game:GetService("Players")
@@ -172,7 +173,22 @@ local function LoadEmotes()
     end
 end
 
--- Bind the comma key to toggle the GUI
+-- Toggle button for mobile devices
+local ToggleButton = Instance.new("TextButton", ScreenGui)
+ToggleButton.Size = UDim2.new(0.1, 0, 0.1, 0)
+ToggleButton.Position = UDim2.new(0.9, -20, 0.9, -20)
+ToggleButton.Text = "Toggle Emotes"
+ToggleButton.TextScaled = true
+ToggleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+-- Toggle the visibility of the Emote GUI when the button is clicked
+ToggleButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+    FavoritesFrame.Visible = not FavoritesFrame.Visible
+end)
+
+-- Bind the comma key to toggle the GUI for PC users
 ContextActionService:BindAction("ToggleEmoteGui", function(_, inputState)
     if inputState == Enum.UserInputState.Begin then
         MainFrame.Visible = not MainFrame.Visible
@@ -181,7 +197,7 @@ ContextActionService:BindAction("ToggleEmoteGui", function(_, inputState)
 end, false, Enum.KeyCode.Comma)
 
 -- Initial notification
-SendNotification("Emote GUI", "Press ',' to open the Emote GUI", 10)
+SendNotification("Emote GUI", "Press ',' to open the Emote GUI, or use the button for mobile.", 10)
 
 -- Load emotes asynchronously
 LoadEmotes()
