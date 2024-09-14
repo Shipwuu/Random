@@ -121,16 +121,32 @@ ToggleButton.MouseButton1Click:Connect(function()
     ToggleButton.Text = IsLoaded and "Hide Emotes" or "Show Emotes"
 end)
 
--- Load all emotes
+-- Load all emotes with cursor-based pagination
 local function LoadEmotes()
-    local success, Response = pcall(function()
-        return game:HttpGetAsync("https://catalog.roblox.com/v1/search/items/details?Category=12&Subcategory=39&SortType=1&limit=30")
-    end)
+    local Cursor = ""
+    while true do
+        local function Request()
+            local success, Response = pcall(function()
+                return game:HttpGetAsync("https://catalog.roblox.com/v1/search/items/details?Category=12&Subcategory=39&SortType=1&SortAggregation=&limit=30&IncludeNotForSale=true&cursor=".. Cursor)
+            end)
 
-    if success then
-        local Body = HttpService:JSONDecode(Response)
-        for _, emoteData in pairs(Body.data) do
-            AddEmote(emoteData.name, emoteData.id, "rbxthumb://type=Asset&id="..emoteData.id.."&w=150&h=150")
+            if success then
+                return HttpService:JSONDecode(Response)
+            else
+                wait(10) -- Retry delay
+                return Request()
+            end
+        end
+
+        local Response = Request()
+        for _, v in pairs(Response.data) do
+            AddEmote(v.name, v.id, "rbxthumb://type=Asset&id="..v.id.."&w=150&h=150")
+        end
+
+        if Response.nextPageCursor then
+            Cursor = Response.nextPageCursor
+        else
+            break -- End loop when no more pages
         end
     end
 end
