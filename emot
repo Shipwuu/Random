@@ -27,6 +27,7 @@ local UserInputService = game:GetService("UserInputService")
 local Emotes = {}
 local LoadedEmotes = {}
 local createShortcutMode = false -- Variable to track if we're in shortcut creation mode
+local holdDuration = 2 -- How long to hold the button to create a shortcut (in seconds)
 
 -- Function to add emotes
 local function AddEmote(name: string, id: IntValue, price: IntValue?)
@@ -113,17 +114,6 @@ UICorner.Name = "UICorner"
 UICorner.Parent = Open
 UICorner.CornerRadius = UDim.new(1, 0)
 
--- Adding the "+" button for draggable emotes
-local AddEmoteButton = Instance.new("TextButton")
-AddEmoteButton.Text = "+"
-AddEmoteButton.Size = UDim2.new(0.05, 0, 0.05, 0)
-AddEmoteButton.Position = UDim2.new(0.9, 0, 0.9, 0)
-AddEmoteButton.TextScaled = true
-AddEmoteButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-AddEmoteButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-AddEmoteButton.BackgroundTransparency = 0.5
-AddEmoteButton.Parent = ScreenGui
-
 -- Emote creation as draggable button
 local function CreateDraggableEmote(emote)
     local DraggableEmoteButton = Instance.new("ImageButton")
@@ -139,45 +129,39 @@ local function CreateDraggableEmote(emote)
     end)
 end
 
--- When "+" button is pressed, enable shortcut creation mode
-AddEmoteButton.MouseButton1Click:Connect(function()
-    createShortcutMode = not createShortcutMode -- Toggle the mode
-    if createShortcutMode then
-        AddEmoteButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Change color to indicate the mode is on
-    else
-        AddEmoteButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0) -- Change back when mode is off
-    end
-end)
-
 -- Function to handle emote button click
-local function HandleEmoteButtonClick(emote)
-    if createShortcutMode then
-        -- If in shortcut creation mode, create a draggable button for this emote
-        CreateDraggableEmote(emote)
-    else
-        -- If not in creation mode, just play the emote normally
-        PlayEmote(emote.name, emote.id)
-    end
+local function HandleEmoteButtonClick(emote, button)
+    local startTime = tick() -- Record the time when the button was pressed
+
+    -- Detect long press to create a shortcut
+    button.MouseButton1Down:Connect(function()
+        startTime = tick() -- Reset the start time when pressing the button
+    end)
+    
+    button.MouseButton1Up:Connect(function()
+        local elapsedTime = tick() - startTime -- Calculate the time held
+
+        if elapsedTime >= holdDuration then
+            -- If the button was held long enough, create a shortcut
+            CreateDraggableEmote(emote)
+        else
+            -- If the button was not held long enough, play the emote
+            PlayEmote(emote.name, emote.id)
+        end
+    end)
 end
 
 -- Loop through emotes and apply the HandleEmoteButtonClick logic
 for _, emote in pairs(Emotes) do
     local EmoteButton = Frame:FindFirstChild(emote.id)
     if EmoteButton then
-        EmoteButton.MouseButton1Click:Connect(function()
-            HandleEmoteButtonClick(emote) -- Call the function to handle button click
-        end)
+        HandleEmoteButtonClick(emote, EmoteButton)
     end
 end
 
 -- Continue with the original script for adding emotes and handling sorting, etc.
 -- ...
 
-
-
-UICorner.Name = "UICorner"
-UICorner.Parent = Open
-UICorner.CornerRadius = UDim.new(1, 0)
 
 local EmoteName = Instance.new("TextLabel")
 EmoteName.Name = "EmoteName"
