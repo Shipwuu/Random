@@ -26,7 +26,6 @@ local UserInputService = game:GetService("UserInputService")
 
 local Emotes = {}
 local LoadedEmotes = {}
-local LongPressDuration = 3 -- Long press detection time
 local CurrentSort = "recentfirst"
 local FavoriteOff = "rbxassetid://10651060677"
 local FavoriteOn = "rbxassetid://10651061109"
@@ -139,6 +138,9 @@ SortList.VerticalAlignment = Enum.VerticalAlignment.Top
 SortList.SortOrder = Enum.SortOrder.LayoutOrder
 SortList.Parent = SortFrame
 
+-- Variable to track if the "+" button is pressed
+local addModeActive = false
+
 local function SortEmotes()
     for i, Emote in pairs(Emotes) do
         local EmoteButton = Frame:FindFirstChild(Emote.id)
@@ -196,62 +198,6 @@ end)
 Corner:Clone().Parent = SortButton
 SortButton.Parent = BackFrame
 
-local CloseButton = Instance.new("TextButton")
-CloseButton.BorderSizePixel = 0
-CloseButton.AnchorPoint = Vector2.new(0.5, 0.5)
-CloseButton.Position = UDim2.new(0.075, 0, -0.075, 0)
-CloseButton.Size = UDim2.new(0.15, 0, 0.1, 0)
-CloseButton.TextScaled = true
-CloseButton.TextColor3 = Color3.new(1, 1, 1)
-CloseButton.BackgroundColor3 = Color3.new(0.5, 0, 0)
-CloseButton.BackgroundTransparency = 0.3
-CloseButton.Text = "Kill Gui"
-CloseButton.MouseButton1Click:Connect(function()
-    ScreenGui:Destroy()
-end)
-Corner:Clone().Parent = CloseButton
-CloseButton.Parent = BackFrame
-
-local SearchBar = Instance.new("TextBox")
-SearchBar.BorderSizePixel = 0
-SearchBar.AnchorPoint = Vector2.new(0.5, 0.5)
-SearchBar.Position = UDim2.new(0.5, 0, -0.075, 0)
-SearchBar.Size = UDim2.new(0.55, 0, 0.1, 0)
-SearchBar.TextScaled = true
-SearchBar.PlaceholderText = "Search"
-SearchBar.TextColor3 = Color3.new(1, 1, 1)
-SearchBar.BackgroundColor3 = Color3.new(0, 0, 0)
-SearchBar.BackgroundTransparency = 0.3
-SearchBar:GetPropertyChangedSignal("Text"):Connect(function()
-    local text = SearchBar.Text:lower()
-    local buttons = Frame:GetChildren()
-    if text ~= text:sub(1, 50) then
-        SearchBar.Text = SearchBar.Text:sub(1, 50)
-        text = SearchBar.Text:lower()
-    end
-    if text ~= "" then
-        for i, button in pairs(buttons) do
-            if button:IsA("GuiButton") then
-                local name = button:GetAttribute("name"):lower()
-                if name:match(text) then
-                    button.Visible = true
-                else
-                    button.Visible = false
-                end
-            end
-        end
-    else
-        for i, button in pairs(buttons) do
-            if button:IsA("GuiButton") then
-                button.Visible = true
-            end
-        end
-    end
-end)
-Corner:Clone().Parent = SearchBar
-SearchBar.Parent = BackFrame
-
--- Long press detection and creating a shortcut
 local function CreateDraggableShortcut(emoteId, emoteIcon)
     local ShortcutButton = Instance.new("ImageButton")
     ShortcutButton.Image = emoteIcon
@@ -273,24 +219,25 @@ local function CreateDraggableShortcut(emoteId, emoteIcon)
     end)
 end
 
-local function DetectLongPress(EmoteButton, emoteId, emoteIcon)
-    local startTime
+-- Button to activate add mode (toggle)
+local AddButton = Instance.new("TextButton")
+AddButton.Text = "+"
+AddButton.Size = UDim2.new(0.05, 0, 0.05, 0)
+AddButton.Position = UDim2.new(0.05, 0, 0.9, 0)
+AddButton.TextScaled = true
+AddButton.BackgroundColor3 = Color3.new(0, 0, 0)
+AddButton.TextColor3 = Color3.new(1, 1, 1)
+AddButton.BackgroundTransparency = 0.3
+AddButton.Parent = ScreenGui
 
-    EmoteButton.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            startTime = tick()
-        end
-    end)
-
-    EmoteButton.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            if tick() - startTime >= LongPressDuration then
-                -- Long press detected, create draggable shortcut
-                CreateDraggableShortcut(emoteId, emoteIcon)
-            end
-        end
-    end)
-end
+AddButton.MouseButton1Click:Connect(function()
+    addModeActive = not addModeActive -- Toggle mode
+    if addModeActive then
+        AddButton.Text = "Adding"
+    else
+        AddButton.Text = "+"
+    end
+end)
 
 -- Function to handle emote buttons
 local function AddEmoteButton(emote)
@@ -300,8 +247,19 @@ local function AddEmoteButton(emote)
     EmoteButton.Image = emote.icon
     EmoteButton.Parent = BackFrame
 
-    -- Detect long press for creating shortcuts
-    DetectLongPress(EmoteButton, emote.id, emote.icon)
+    -- Detect button press for creating draggable shortcut
+    EmoteButton.MouseButton1Click:Connect(function()
+        if addModeActive then
+            -- Create draggable shortcut
+            CreateDraggableShortcut(emote.id, emote.icon)
+        else
+            -- Play emote directly
+            local Humanoid = Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if Humanoid then
+                Humanoid:PlayEmoteAndGetAnimTrackById(emote.id)
+            end
+        end
+    end)
 end
 
 -- Example usage with an emote
@@ -309,6 +267,7 @@ AddEmote("Wave", 123456789, 50) -- Add your emotes here
 AddEmoteButton(Emotes[1]) -- Example usage to add an emote button to the screen
 
 -- Rest of the original script continues...
+
 
 
 -- Wait for emotes to finish loading
