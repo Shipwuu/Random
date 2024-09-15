@@ -1,0 +1,205 @@
+local HttpService = game:GetService("HttpService")
+local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local MarketplaceService = game:GetService("MarketplaceService")
+local StarterGui = game:GetService("StarterGui")
+local TweenService = game:GetService("TweenService")
+
+local Cursor = ""
+local FavoritedEmotes = {}
+local Emotes = {}
+
+-- Destroy the old GUI if it already exists
+if CoreGui:FindFirstChild("FavoriteEmotes") then
+    CoreGui:FindFirstChild("FavoriteEmotes"):Destroy()
+end
+
+-- Load FavoritedEmotes file
+if isfile("FavoritedEmotes.txt") then
+    pcall(function()
+        FavoritedEmotes = HttpService:JSONDecode(readfile("FavoritedEmotes.txt"))
+    end)
+else
+    writefile("FavoritedEmotes.txt", HttpService:JSONEncode(FavoritedEmotes))
+end
+
+-- Create a new ScreenGui to hold the draggable buttons
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "FavoriteEmotes"
+ScreenGui.Parent = CoreGui
+
+-- Function to play the selected emote
+local function PlayEmote(name, id)
+    local LocalPlayer = Players.LocalPlayer
+    if not LocalPlayer or not LocalPlayer.Character then
+        print("LocalPlayer or Character is nil, cannot play emote")
+        return
+    end
+    local Humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    local Description = Humanoid and Humanoid:FindFirstChildOfClass("HumanoidDescription")
+    if not Description then
+        return
+    end
+    if LocalPlayer.Character.Humanoid.RigType ~= Enum.HumanoidRigType.R6 then
+        local succ, err = pcall(function()
+            Humanoid:PlayEmoteAndGetAnimTrackById(id)
+        end)
+        if not succ then
+            Description:AddEmote(name, id)
+            Humanoid:PlayEmoteAndGetAnimTrackById(id)
+        end
+    else
+        StarterGui:SetCore("SendNotification", {
+            Title = "R6 Emote not supported",
+            Text = "You need to be R15 to use this emote.",
+            Duration = 3
+        })
+    end
+end
+
+-- Create draggable button for each favorite emote
+local function CreateFavoriteEmoteButton(emote)
+    local EmoteButton = Instance.new("ImageButton")
+    EmoteButton.Image = emote.icon
+    EmoteButton.Size = UDim2.new(0, 50, 0, 50)  -- Small size 50x50
+    EmoteButton.Position = UDim2.new(0.5, math.random(-100, 100), 0.4, math.random(-100, 100))  -- Random spawn position
+    EmoteButton.BackgroundColor3 = Color3.new(0, 0, 0)  -- Black background
+    EmoteButton.BackgroundTransparency = 0.5  -- 0.8 transparency
+    EmoteButton.Draggable = true
+    EmoteButton.Parent = ScreenGui
+
+    -- Add UICorner to make it rounded
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 8)  -- Adjust corner radius
+    UICorner.Parent = EmoteButton
+
+    -- Add white outline (frame) around the button
+    local Outline = Instance.new("UIStroke")
+    Outline.Thickness = 2
+    Outline.Color = Color3.new(1, 1, 1)  -- White color
+    Outline.Parent = EmoteButton
+
+    -- Play emote when the button is clicked
+    EmoteButton.MouseButton1Click:Connect(function()
+        PlayEmote(emote.name, emote.id)
+        print("Emote button clicked: Playing emote " .. emote.name)
+    end)
+end
+
+-- Function to add an emote to the list
+local function AddEmote(name, id, icon)
+    local emote = {
+        name = name,
+        id = id,
+        icon = icon or "rbxthumb://type=Asset&id=" .. id .. "&w=150&h=150"
+    }
+    table.insert(Emotes, emote)
+end
+
+-- Function to fetch emotes from Roblox Catalog
+local function FetchEmotes()
+    while true do
+        local function Request()
+            local success, Response = pcall(function()
+                return game:HttpGetAsync("https://catalog.roblox.com/v1/search/items/details?Category=12&Subcategory=39&SortType=1&SortAggregation=&limit=30&IncludeNotForSale=true&cursor=" .. Cursor)
+            end)
+            if not success then
+                task.wait(10)
+                return Request()
+            end
+            return Response
+        end
+        
+        local Response = Request()
+        local Body = HttpService:JSONDecode(Response)
+        
+        for i, v in pairs(Body.data) do
+            if v and v.name and v.id then
+                AddEmote(v.name, v.id, v.icon)
+            end
+        end
+        
+        if Body.nextPageCursor ~= nil then
+            Cursor = Body.nextPageCursor
+        else
+            break
+        end
+    end
+end
+
+-- Create buttons for favorite emotes
+local function CreateFavoriteEmoteButtons()
+    for _, favorite in ipairs(FavoritedEmotes) do
+        for _, emote in pairs(Emotes) do
+            if emote.id == favorite then
+                CreateFavoriteEmoteButton(emote)
+                print("Created shortcut for favorite emote: " .. emote.name)
+            end
+        end
+    end
+end
+
+-- Create Loading Screen
+local function CreateLoadingScreen()
+    local LoadingFrame = Instance.new("Frame")
+    LoadingFrame.Size = UDim2.new(0, 300, 0, 100)
+    LoadingFrame.Position = UDim2.new(0.5, -150, 0.5, -50)
+    LoadingFrame.BackgroundColor3 = Color3.new(0, 0, 0)
+    LoadingFrame.BackgroundTransparency = 0.5
+    LoadingFrame.Parent = ScreenGui
+
+    -- Add UICorner for the frame
+    local FrameCorner = Instance.new("UICorner")
+    FrameCorner.CornerRadius = UDim.new(0, 12)
+    FrameCorner.Parent = LoadingFrame
+
+    -- Create a label for "Emote Loading..."
+    local LoadingText = Instance.new("TextLabel")
+    LoadingText.Size = UDim2.new(1, 0, 1, 0)
+    LoadingText.Text = "Emote Loading..."
+    LoadingText.TextColor3 = Color3.new(1, 1, 1)
+    LoadingText.TextScaled = true
+    LoadingText.BackgroundTransparency = 1
+    LoadingText.Parent = LoadingFrame
+
+    -- Create a fade-in effect
+    LoadingFrame.BackgroundTransparency = 1
+    local fadeIn = TweenService:Create(LoadingFrame, TweenInfo.new(1), {BackgroundTransparency = 0.5})
+    fadeIn:Play()
+
+    -- Animate the loading text (optional)
+    local function AnimateLoadingText()
+        while true do
+            for i = 1, 3 do
+                LoadingText.Text = "Emote Loading" .. string.rep(".", i)
+                task.wait(0.5)
+            end
+        end
+    end
+    task.spawn(AnimateLoadingText)
+
+    -- Fade out when loading is done
+    task.delay(3, function()  -- Simulate loading time, adjust as needed
+        local fadeOut = TweenService:Create(LoadingFrame, TweenInfo.new(1), {BackgroundTransparency = 1})
+        fadeOut:Play()
+        fadeOut.Completed:Connect(function()
+            LoadingFrame:Destroy()
+        end)
+    end)
+end
+
+-- Fetch and process emotes
+FetchEmotes()
+
+-- Show loading screen
+CreateLoadingScreen()
+
+-- After fetching, create buttons for the favorites
+CreateFavoriteEmoteButtons()
+
+-- Notify that favorite emotes are ready
+StarterGui:SetCore("SendNotification", {
+    Title = "Favorite Emotes Ready",
+    Text = "Shortcut buttons for your favorite emotes have been created.",
+    Duration = 3
+})
