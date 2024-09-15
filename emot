@@ -25,17 +25,15 @@ local StarterGui = game:GetService("StarterGui")
 local UserInputService = game:GetService("UserInputService")
 
 local Emotes = {}
+local FavoritedEmotes = {} -- Store favorite emotes
 local LoadedEmotes = {}
-local holdDuration = 1 -- How long to hold the button to create a shortcut (in seconds)
-
--- Create a new ScreenGui specifically for emote shortcut buttons
 local ShortcutGui = Instance.new("ScreenGui")
 ShortcutGui.Name = "ShortcutGui"
 ShortcutGui.DisplayOrder = 3
 ShortcutGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ShortcutGui.Parent = game.CoreGui -- Place it in CoreGui to avoid overlap with the main UI
+ShortcutGui.Parent = game.CoreGui -- Place it in CoreGui
 
--- Function to add emotes
+-- Function to add emotes and detect favorited emotes
 local function AddEmote(name: string, id: IntValue, price: IntValue?)
 	LoadedEmotes[id] = false
 	task.spawn(function()
@@ -71,7 +69,67 @@ local function AddEmote(name: string, id: IntValue, price: IntValue?)
 		})
 	end)
 end
-local CurrentSort = "recentfirst"
+
+-- Function to create draggable shortcut button for the emote
+local function CreateDraggableEmote(emote)
+    local DraggableEmoteButton = Instance.new("ImageButton")
+    DraggableEmoteButton.Image = emote.icon
+    DraggableEmoteButton.Size = UDim2.new(0.1, 0, 0.1, 0)
+    DraggableEmoteButton.Position = UDim2.new(0.1 * (#FavoritedEmotes), 0, 0.05, 0) -- Place buttons horizontally
+    DraggableEmoteButton.BackgroundTransparency = 0.2
+    DraggableEmoteButton.Draggable = true
+    DraggableEmoteButton.Parent = ShortcutGui -- Add the button to the ShortcutGui
+
+    DraggableEmoteButton.MouseButton1Click:Connect(function()
+        PlayEmote(emote.name, emote.id) -- Play the selected emote
+    end)
+
+    -- Log in the console when the button is created
+    print("Created shortcut for: " .. emote.name)
+    ShowNotification("Shortcut Created", "Shortcut for " .. emote.name .. " created")
+end
+
+-- Function to detect favorited emotes and create shortcut buttons
+local function DetectAndCreateFavoriteShortcuts()
+    for _, emote in pairs(Emotes) do
+        if table.find(FavoritedEmotes, emote.id) then
+            -- If the emote is favorited, create a shortcut button
+            CreateDraggableEmote(emote)
+        end
+    end
+end
+
+-- Function to load favorited emotes from file or create new file
+local function LoadFavoritedEmotes()
+    if isfile("FavoritedEmotes.txt") then
+        pcall(function()
+            FavoritedEmotes = HttpService:JSONDecode(readfile("FavoritedEmotes.txt"))
+        end)
+    else
+        writefile("FavoritedEmotes.txt", HttpService:JSONEncode(FavoritedEmotes))
+    end
+end
+
+-- Function to play an emote
+local function PlayEmote(name: string, id: IntValue)
+    local LocalPlayer = Players.LocalPlayer
+    local Humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    local Description = Humanoid and Humanoid:FindFirstChildOfClass("HumanoidDescription")
+    if not Description then
+        return
+    end
+    if LocalPlayer.Character.Humanoid.RigType ~= Enum.HumanoidRigType.R6 then
+        local succ, err = pcall(function()
+            Humanoid:PlayEmoteAndGetAnimTrackById(id)
+        end)
+        if not succ then
+            Description:AddEmote(name, id)
+            Humanoid:PlayEmoteAndGetAnimTrackById(id)
+        end
+    else
+        ShowNotification("R6 Emote not supported", "You need to be R15 to use this emote.")
+    end
+end
 
 -- Notification function
 local function ShowNotification(title, text)
@@ -82,54 +140,11 @@ local function ShowNotification(title, text)
     })
 end
 
--- Function to create draggable shortcut button for the emote
-local function CreateDraggableEmote(emote)
-    local DraggableEmoteButton = Instance.new("ImageButton")
-    DraggableEmoteButton.Image = emote.icon
-    DraggableEmoteButton.Size = UDim2.new(0.1, 0, 0.1, 0)
-    DraggableEmoteButton.Position = UDim2.new(0.5, 0, 0.5, 0) -- Start in the middle of the screen
-    DraggableEmoteButton.BackgroundTransparency = 0.2
-    DraggableEmoteButton.Draggable = true
-    DraggableEmoteButton.Parent = ShortcutGui -- Add the button to the ShortcutGui
-
-    DraggableEmoteButton.MouseButton1Click:Connect(function()
-        PlayEmote(emote.name, emote.id) -- Play the selected emote
-    end)
-end
-
--- Function to handle emote button click with hold detection
-local function HandleEmoteButtonClick(emote, button)
-    local startTime = tick() -- Record the time when the button was pressed
-
-    -- Detect long press to create a shortcut
-    button.MouseButton1Down:Connect(function()
-        startTime = tick() -- Reset the start time when pressing the button
-    end)
-
-    button.MouseButton1Up:Connect(function()
-        local elapsedTime = tick() - startTime -- Calculate the time held
-
-        if elapsedTime >= holdDuration then
-            -- If the button was held long enough, create a shortcut
-            CreateDraggableEmote(emote)
-            ShowNotification("Shortcut Created", "Shortcut Emote Will Appear") -- Notify when shortcut is created
-        else
-            -- If the button was not held long enough, play the emote
-            PlayEmote(emote.name, emote.id)
-        end
-    end)
-end
-
--- Loop through emotes and apply the HandleEmoteButtonClick logic
-for _, emote in pairs(Emotes) do
-    local EmoteButton = Frame:FindFirstChild(emote.id)
-    if EmoteButton then
-        HandleEmoteButtonClick(emote, EmoteButton)
-    end
-end
+-- Load favorited emotes and detect them
+LoadFavoritedEmotes()
+DetectAndCreateFavoriteShortcuts()
 
 -- Continue with the original script for adding emotes and handling sorting, etc.
--- ...
 
 
 local FavoriteOff = "rbxassetid://10651060677"
