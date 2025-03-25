@@ -1,0 +1,8 @@
+-- Iterate through all objects in the Workspace
+for _, obj in pairs(workspace:GetDescendants()) do
+    -- Check if the object has a ProximityPrompt
+    if obj:IsA("ProximityPrompt") then
+        -- Set the HoldDuration to 0 for instant activation
+        obj.HoldDuration = 0
+    end
+end
