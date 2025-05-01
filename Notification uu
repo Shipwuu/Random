@@ -1,4 +1,4 @@
-function NotificationLibrary:PromptYesNo(Text, Duration, Callback)
+function NotificationLibrary:SendYesNo(Text, Duration, Callback)
     local libaryCore = CoreGui:FindFirstChild(LibraryName)
     if not CoreGui:FindFirstChild(LibraryName) then
         NotificationLibrary:Load()
@@ -7,30 +7,30 @@ function NotificationLibrary:PromptYesNo(Text, Duration, Callback)
         templateFolder = library.Templates
         canvas = library.list
     end
-
-    if templateFolder:FindFirstChild("Prompt") then
+    if templateFolder:FindFirstChild("YesNo") then
         task.spawn(function()
             local success, err = pcall(function()
-                local Prompt = templateFolder:WaitForChild("Prompt"):Clone()
-                Prompt.Visible = true
-                Prompt.Parent = canvas
-                Prompt.Header.Text = Text
+                local Notification = templateFolder:WaitForChild("YesNo"):Clone()
+                local filler = Notification.Filler
+                local bar = Notification.bar
+                Notification.Header.Text = Text
 
-                local filler = Prompt.Filler
-                local bar = Prompt.bar
-                local yesBtn = Prompt.Yes
-                local noBtn = Prompt.No
+                local yesBtn = Notification.Yes
+                local noBtn = Notification.No
 
                 local answered = false
 
-                Prompt.Size = UDim2.new(0, 0, 0.087, 0)
+                Notification.Visible = true
+                Notification.Parent = canvas
+
+                Notification.Size = UDim2.new(0, 0, 0.087, 0)
                 filler.Size = UDim2.new(1, 0, 1, 0)
 
                 local T1 = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
                 local T2 = TweenInfo.new(Duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
                 local T3 = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
-                TweenService:Create(Prompt, T1, {Size = UDim2.new(1, 0, 0.087, 0)}):Play()
+                TweenService:Create(Notification, T1, {Size = UDim2.new(1, 0, 0.087, 0)}):Play()
                 task.wait(0.2)
                 TweenService:Create(filler, T3, {Size = UDim2.new(0.011, 0, 1, 0)}):Play()
                 TweenService:Create(bar, T2, {Size = UDim2.new(1, 0, 0.05, 0)}):Play()
@@ -39,7 +39,7 @@ function NotificationLibrary:PromptYesNo(Text, Duration, Callback)
                     if not answered then
                         answered = true
                         Callback(true)
-                        Prompt:Destroy()
+                        Notification:Destroy()
                     end
                 end)
 
@@ -47,7 +47,7 @@ function NotificationLibrary:PromptYesNo(Text, Duration, Callback)
                     if not answered then
                         answered = true
                         Callback(false)
-                        Prompt:Destroy()
+                        Notification:Destroy()
                     end
                 end)
 
@@ -56,17 +56,16 @@ function NotificationLibrary:PromptYesNo(Text, Duration, Callback)
                 if not answered then
                     answered = true
                     Callback(false)
-                    TweenService:Create(Prompt, T3, {Size = UDim2.new(0, 0, 0.087, 0)}):Play()
+                    TweenService:Create(Notification, T3, {Size = UDim2.new(0, 0, 0.087, 0)}):Play()
                     task.wait(0.25)
-                    Prompt:Destroy()
+                    Notification:Destroy()
                 end
             end)
             if not success then
-                warn("There was an error while showing prompt!")
-                warn(err)
+                warn("Error in YesNo notification: " .. err)
             end
         end)
     else
-        warn("Missing 'Prompt' template in Templates folder.")
+        warn("Mode 'YesNo' tidak ditemukan di Templates.")
     end
 end
