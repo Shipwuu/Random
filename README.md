@@ -1,5 +1,5 @@
 # DeltaKeyboard & Dex Mobile
-- Credits for @Shipuu
+- Credits by @Shipuu
 
 # Copy this
 ```lua 
