@@ -1,62 +1,20 @@
--- 1. KONFIGURASI IP LAPTOP ANDA
-local TARGET_IP = "192.168.1.15" 
-local TARGET_PORT = "7402"
+-- PERBAIKAN METATABLE HOOK (SANGAT AGRESIF)
+local IP_LAPTOP = "192.168.1.6" -- Sesuai log PowerShell Anda
 
-print("[IYAI-CORE] Memulai pengamanan jalur koneksi eksternal...")
+print("[IYAI-PATCH] Memulai injeksi jaringan tingkat tinggi...")
 
--- Fungsi untuk memeriksa dan mengganti URL secara paksa
-local function forceRedirectUrl(url)
-    if type(url) == "string" then
-        if string.find(url, "localhost") or string.find(url, "127.0.0.1") then
-            local oldUrl = url
-            -- Mengganti domain localhost/127.0.0.1 dengan IP Laptop Anda
-            url = string.gsub(url, "localhost", TARGET_IP)
-            url = string.gsub(url, "127.0.0.1", TARGET_IP)
-            warn("[IYAI-REDIRECT] Terdeteksi! Mengalihkan: " .. oldUrl .. " -> " .. url)
+-- Ambil fungsi request asli
+local old_request
+old_request = hookfunction(syn and syn.request or http_request or request, function(options)
+    if options and type(options) == "table" and type(options.Url) == "string" then
+        -- Paksa ganti semua kata localhost atau 127.0.0.1 kapan pun skrip utama memanggilnya
+        if string.find(options.Url, "localhost") or string.find(options.Url, "127.0.0.1") then
+            options.Url = string.gsub(options.Url, "localhost", IP_LAPTOP)
+            options.Url = string.gsub(options.Url, "127.0.0.1", IP_LAPTOP)
+            warn("[IYAI-FORCE] Berhasil membelokkan skrip utama ke: " .. options.Url)
         end
     end
-    return url
-end
+    return old_request(options)
+end)
 
--- 2. MENCEGAT FUNGSI HTTP REQUEST DARI SEMUA JENIS EXECUTOR (Akar Terdalam)
-local function applyHook(targetTable, functionName)
-    if targetTable and targetTable[functionName] then
-        local originalFunc = targetTable[functionName]
-        targetTable[functionName] = function(options)
-            if options and type(options) == "table" and options.Url then
-                options.Url = forceRedirectUrl(options.Url)
-            end
-            return originalFunc(options)
-        end
-    end
-end
-
--- Menerapkan pencegatan ke semua nama fungsi request yang mungkin ada di executor mobile
-applyHook(_G, "http_request")
-applyHook(_G, "request")
-if syn then applyHook(syn, "request") end
-if http then applyHook(http, "request") end
-if fluxus then applyHook(fluxus, "request") end
-if codex then applyHook(codex, "request") end
-if arceus then applyHook(arceus, "request") end
-
--- 3. JALUR CADANGAN: MEMAKSA KIRIM SINYAL DETAK JANTUNG (HEARTBEAT) MANUAL
--- Ini menjamin server laptop tahu bahwa HP Anda aktif meskipun plugin utama mogok
-local requestFunc = syn and syn.request or http and http.request or http_request or request
-if requestFunc then
-    task.spawn(function()
-        print("[IYAI-HEARTBEAT] Jalur pengirim sinyal manual aktif.")
-        while task.wait(2) do
-            pcall(function()
-                requestFunc({
-                    Url = "http://" .. TARGET_IP .. ":" .. TARGET_PORT .. "/roblox/poll",
-                    Method = "GET"
-                })
-            end)
-        end
-    end)
-else
-    warn("[IYAI-ERROR] Executor Anda sangat terbatas, tidak mendukung HTTP Request sama sekali!")
-end
-
-print("[SUCCESS] Sistem Super Hook Aktif 100%! Silakan jalankan plugin IYAI (;plugin iyai) sekarang.")
+print("[SUCCESS] Proteksi Jaringan Selesai. Silakan buka menu ;ai dan klik Connect.")
