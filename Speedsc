@@ -4,7 +4,7 @@ local LocalPlayer = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
 
 -- Variables
-local currentSpeed = 6.5 -- Default WalkSpeed
+local currentSpeed = 14 -- Default WalkSpeed
 local speedStep = 2 -- Increment/Decrement step for speed
 local speedOnDuration = 7 -- Time after which button color changes to orange
 local speedToggleState = false -- State of the toggle button
@@ -176,7 +176,7 @@ local function toggleSpeed()
     else
         toggleButton.Text = ""
         toggleButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255) -- Black transparent
-        setWalkSpeed(8) -- Reset speed to default when OFF
+        setWalkSpeed(6.5) -- Reset speed to default when OFF
     end
 end
 
