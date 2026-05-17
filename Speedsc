@@ -4,7 +4,7 @@ local LocalPlayer = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
 
 -- Variables
-local currentSpeed = 14 -- Default WalkSpeed
+local currentSpeed = 6.5 -- Default WalkSpeed
 local speedStep = 2 -- Increment/Decrement step for speed
 local speedOnDuration = 7 -- Time after which button color changes to orange
 local speedToggleState = false -- State of the toggle button
